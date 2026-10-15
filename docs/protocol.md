@@ -72,7 +72,7 @@
 | 值 | 状态 | 语义 | 客户端动作 |
 |----|------|------|-----------|
 | 0 | OK | 全部落盘 | complete 各 Future(offset) |
-| 1 | RETRY_LATER | broker 业务池饱和（背压） | 退避后重发（v1 sleep 退避，M3 接入重试策略） |
+| 1 | RETRY_LATER | broker 业务池饱和（背压） | SDK 自动重发：scheduler 线性退避（不阻塞回调线程），超过 maxRetries 后回调失败 |
 | 2 | ERROR | 服务端错误 | complete 异常 |
 
 ## 6. BODY 契约（protobuf）
