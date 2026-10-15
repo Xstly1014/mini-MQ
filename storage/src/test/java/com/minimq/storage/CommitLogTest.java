@@ -29,7 +29,7 @@ class CommitLogTest {
     }
 
     /**
-     * Segment-rolling continuity: with a tiny 64 KiB segment and 129 B records
+     * Segment-rolling continuity: with a tiny 64 KiB segment and 135 B records
      * the log must roll many times. Global offsets stay monotonic; a gap is
      * allowed only at a segment boundary (the tail hole of a rolled segment).
      * Every record must survive a reopen byte-for-byte.
@@ -37,13 +37,13 @@ class CommitLogTest {
     @Test
     void segmentRollingKeepsOffsetsContiguous() throws IOException {
         int segmentSize = 64 * 1024;
-        int count = 3000; // 3000 x 129B = ~387 KiB => >= 6 segments
+        int count = 3000; // 3000 x 135B = ~398 KiB => >= 6 segments
 
         long[] offsets = new long[count];
         long lastEnd = 0;
         try (CommitLog log = CommitLog.open(tempDir, segmentSize)) {
             for (int i = 0; i < count; i++) {
-                Message msg = new Message(1_700_000_000_000L + i, i, makePayload(i, 100));
+                Message msg = new Message(1_700_000_000_000L + i, i, "roll", makePayload(i, 100));
                 long offset = log.append(msg);
                 if (offset != lastEnd) {
                     assertTrue(offset % segmentSize == 0 && offset > lastEnd,
@@ -64,6 +64,7 @@ class CommitLogTest {
                 Message msg = it.next();
                 assertTrue(i < count, "more records than written");
                 assertEquals(offsets[i], msg.getOffset(), "offset mismatch at record " + i);
+                assertEquals("roll", msg.getTopic());
                 assertArrayEquals(makePayload(i, 100), msg.getPayload());
                 assertEquals(i, msg.getKeyHash());
                 i++;
@@ -85,7 +86,7 @@ class CommitLogTest {
 
         try (CommitLog log = CommitLog.open(tempDir, segmentSize)) {
             for (int i = 0; i < count; i++) {
-                offsets[i] = log.append(new Message(1L, i, makePayload(i, 100)));
+                offsets[i] = log.append(new Message(1L, i, "soak", makePayload(i, 100)));
             }
         }
 
@@ -98,34 +99,26 @@ class CommitLogTest {
                 Message msg = it.next();
                 assertTrue(i < count, "more records than written");
                 assertEquals(offsets[i], msg.getOffset(), "offset mismatch at record " + i);
+                assertEquals("soak", msg.getTopic());
                 assertArrayEquals(makePayload(i, 100), msg.getPayload(), "payload mismatch at " + i);
                 i++;
             }
             assertEquals(count, i, "expected all records back");
             // Core invariant: the next append lands exactly at the current max offset.
             probeBefore = log.maxOffset();
-            assertEquals(probeBefore, log.append(new Message(2L, -1, new byte[8])));
+            assertEquals(probeBefore, log.append(new Message(2L, -1, "probe", new byte[8])));
         }
-    }
-
-    /** Deterministic payload: size fixed, content derived from the index. */
-    private static byte[] makePayload(int i, int size) {
-        byte[] payload = new byte[size];
-        payload[0] = (byte) (i & 0xFF);
-        payload[1] = (byte) ((i >> 8) & 0xFF);
-        payload[size - 1] = (byte) ~payload[0];
-        return payload;
     }
 
     @Test
     void appendAfterReopenContinuesAtMaxOffset() throws IOException {
         try (CommitLog log = CommitLog.open(tempDir, 64 * 1024)) {
             for (int i = 0; i < 50; i++) {
-                log.append(new Message(1L, i, payload("a" + i)));
+                log.append(new Message(1L, i, "t", payload("a" + i)));
             }
         }
         try (CommitLog log = CommitLog.open(tempDir, 64 * 1024)) {
-            Message msg = new Message(1L, 50, payload("after-reopen"));
+            Message msg = new Message(1L, 50, "t", payload("after-reopen"));
             long offset = log.append(msg);
             assertEquals(offset, msg.getOffset());
             // The new record must be readable right after the old ones.
@@ -145,8 +138,17 @@ class CommitLogTest {
     void recordLargerThanSegmentIsRejected() {
         assertThrows(IOException.class, () -> {
             try (CommitLog log = CommitLog.open(tempDir, 1024)) {
-                log.append(new Message(1L, 1, new byte[2048]));
+                log.append(new Message(1L, 1, "t", new byte[2048]));
             }
         });
+    }
+
+    /** Deterministic payload: size fixed, content derived from the index. */
+    private static byte[] makePayload(int i, int size) {
+        byte[] payload = new byte[size];
+        payload[0] = (byte) (i & 0xFF);
+        payload[1] = (byte) ((i >> 8) & 0xFF);
+        payload[size - 1] = (byte) ~payload[0];
+        return payload;
     }
 }

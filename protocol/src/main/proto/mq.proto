@@ -1,0 +1,91 @@
+// mini-MQ wire protocol bodies (M1).
+//
+// The frame layer (see docs/protocol.md) is a 16-byte fixed header:
+//   MAGIC(2B 0xCACE) VERSION(1B 0x01) TYPE(1B) REQUEST_ID(8B) BODY_LENGTH(4B)
+// and BODY is one of the messages below, serialized with protobuf.
+syntax = "proto3";
+
+package minimq;
+
+option java_package = "com.minimq.protocol.gen";
+option java_outer_classname = "MqProto";
+option java_multiple_files = false;
+
+// ---------- produce path ----------
+
+message MessageData {
+  string topic = 1;
+  bytes payload = 2;
+  // Idempotency key: hashed into the storage KEY_HASH field. Broker-side
+  // dedup window arrives in M4; the field flows end-to-end from M1.
+  string seq_key = 3;
+  int64 timestamp = 4;
+}
+
+// TYPE = PRODUCE
+message ProduceRequest {
+  repeated MessageData messages = 1;
+}
+
+// TYPE = PRODUCE_ACK
+message ProduceAck {
+  // One entry per request message, same order; -1 = not appended.
+  repeated int64 offsets = 1;
+  ProduceStatus status = 2;
+  string error = 3;
+}
+
+enum ProduceStatus {
+  OK = 0;
+  // Broker business pool saturated: producer should back off and retry.
+  RETRY_LATER = 1;
+  ERROR = 2;
+}
+
+// ---------- consume path ----------
+
+// TYPE = FETCH
+message FetchRequest {
+  string topic = 1;
+  // Global CommitLog scan position: consume from here (inclusive).
+  int64 offset = 2;
+  int32 max_count = 3;
+}
+
+message RecordData {
+  int64 offset = 1;
+  int64 timestamp = 2;
+  string topic = 3;
+  bytes payload = 4;
+  string seq_key = 5;
+  // Hash of the producer seq_key, as stored in the CommitLog KEY_HASH field.
+  // The original key string is not returned (storage keeps only the hash);
+  // M4 idempotent consumption keys off this value.
+  int64 key_hash = 6;
+}
+
+// TYPE = FETCH_RESP
+message FetchResponse {
+  repeated RecordData records = 1;
+  // Global scan position after the last examined record (this is what the
+  // consumer persists as its committed offset), even when records were
+  // filtered out by topic.
+  int64 next_offset = 2;
+  // M3 replication high watermark; equals broker max offset until then.
+  int64 high_watermark = 3;
+}
+
+// ---------- offset commit (defined in M1, broker-side storage from M3) ----------
+
+// TYPE = COMMIT_OFFSET
+message CommitOffsetRequest {
+  string topic = 1;
+  string consumer_group = 2;
+  // Next global offset to consume.
+  int64 offset = 3;
+}
+
+// TYPE = COMMIT_OFFSET_ACK
+message CommitOffsetAck {
+  bool ok = 1;
+}

@@ -2,22 +2,29 @@ package com.minimq.storage;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 import java.util.zip.CRC32;
 
 /**
- * Wire format (little-endian), fixed 29-byte header + variable payload:
+ * Wire format v1.1 (little-endian), fixed 31-byte header + variable topic and
+ * payload:
  *
  * <pre>
- * | field        | offset | size | notes                                   |
- * |--------------|--------|------|-----------------------------------------|
- * | TOTAL_SIZE   | 0      | 4B   | header + payload, i.e. the record size |
- * | MAGIC        | 4      | 1B   | 0x6D ('m')                              |
- * | CRC32        | 5      | 4B   | over bytes [MAGIC .. end of record]     |
- * | TIMESTAMP    | 9      | 8B   | producer-side epoch millis              |
- * | KEY_HASH     | 17     | 8B   | hash of the message key                 |
- * | PAYLOAD_LEN  | 25     | 4B   | must equal TOTAL_SIZE - HEADER_SIZE     |
- * | PAYLOAD      | 29     | n B  | opaque bytes                            |
+ * | field        | offset | size | notes                                        |
+ * |--------------|--------|------|----------------------------------------------|
+ * | TOTAL_SIZE   | 0      | 4B   | whole record size (header + topic + payload) |
+ * | MAGIC        | 4      | 1B   | 0x6E (format v1.1; v1.0 was 0x6D, no topic)  |
+ * | CRC32        | 5      | 4B   | over MAGIC + [TIMESTAMP .. end of record]    |
+ * | TIMESTAMP    | 9      | 8B   | producer-side epoch millis                   |
+ * | KEY_HASH     | 17     | 8B   | hash of the idempotency (seq) key            |
+ * | TOPIC_LEN    | 25     | 2B   | topic length in bytes                        |
+ * | PAYLOAD_LEN  | 27     | 4B   | payload length in bytes                      |
+ * | TOPIC        | 31     | n B  | UTF-8 topic                                  |
+ * | PAYLOAD      | 31+n   | m B  | opaque bytes                                 |
  * </pre>
+ *
+ * v1.0 -> v1.1: TOPIC_LEN + TOPIC added for topic routing over the network
+ * path (M1). MAGIC bumped so the two layouts can never be confused.
  *
  * Decode distinguishes:
  * <ul>
@@ -31,16 +38,17 @@ import java.util.zip.CRC32;
  */
 public final class MessageCodec {
 
-    public static final int MAGIC = 0x6D;
+    public static final int MAGIC = 0x6E;
 
-    public static final int HEADER_SIZE = 29;
+    public static final int HEADER_SIZE = 31;
     public static final int OFFSET_TOTAL_SIZE = 0;
     public static final int OFFSET_MAGIC = 4;
     public static final int OFFSET_CRC = 5;
     public static final int OFFSET_TIMESTAMP = 9;
     public static final int OFFSET_KEY_HASH = 17;
-    public static final int OFFSET_PAYLOAD_LEN = 25;
-    public static final int OFFSET_PAYLOAD = HEADER_SIZE;
+    public static final int OFFSET_TOPIC_LEN = 25;
+    public static final int OFFSET_PAYLOAD_LEN = 27;
+    public static final int FIXED_HEADER_SIZE = HEADER_SIZE; // topic starts here
 
     /**
      * Upper bound of one record; guards against garbage TOTAL_SIZE values during
@@ -48,22 +56,38 @@ public final class MessageCodec {
      */
     public static final int MAX_MESSAGE_SIZE = 4 * 1024 * 1024;
 
+    /** Upper bound of one topic string (bytes). */
+    public static final int MAX_TOPIC_LENGTH = 1024;
+
     private MessageCodec() {
     }
 
     public static int sizeOf(Message msg) {
-        return HEADER_SIZE + msg.getPayload().length;
+        byte[] topicBytes = topicBytes(msg.getTopic());
+        return HEADER_SIZE + topicBytes.length + msg.getPayload().length;
+    }
+
+    private static byte[] topicBytes(String topic) {
+        if (topic == null) {
+            topic = "";
+        }
+        byte[] bytes = topic.getBytes(StandardCharsets.UTF_8);
+        if (bytes.length > MAX_TOPIC_LENGTH) {
+            throw new IllegalArgumentException("topic too long: " + bytes.length + " > " + MAX_TOPIC_LENGTH);
+        }
+        return bytes;
     }
 
     /**
      * Encodes the message into a fresh heap array. The CRC covers everything
      * except TOTAL_SIZE and the CRC field itself, i.e. the MAGIC byte plus
-     * [TIMESTAMP .. payload end] (two contiguous ranges around the CRC slot),
+     * [TIMESTAMP .. record end] (two contiguous ranges around the CRC slot),
      * mirroring decode() exactly.
      */
     public static byte[] encode(Message msg) {
         byte[] payload = msg.getPayload();
-        int total = HEADER_SIZE + payload.length;
+        byte[] topic = topicBytes(msg.getTopic());
+        int total = HEADER_SIZE + topic.length + payload.length;
         if (total > MAX_MESSAGE_SIZE) {
             throw new IllegalArgumentException("message too large: " + total + " > " + MAX_MESSAGE_SIZE);
         }
@@ -73,8 +97,10 @@ public final class MessageCodec {
         buf.put(OFFSET_MAGIC, (byte) MAGIC);
         buf.putLong(OFFSET_TIMESTAMP, msg.getTimestamp());
         buf.putLong(OFFSET_KEY_HASH, msg.getKeyHash());
+        buf.putShort(OFFSET_TOPIC_LEN, (short) topic.length);
         buf.putInt(OFFSET_PAYLOAD_LEN, payload.length);
-        System.arraycopy(payload, 0, out, OFFSET_PAYLOAD, payload.length);
+        System.arraycopy(topic, 0, out, HEADER_SIZE, topic.length);
+        System.arraycopy(payload, 0, out, HEADER_SIZE + topic.length, payload.length);
 
         CRC32 crc32 = new CRC32();
         crc32.update(out, OFFSET_MAGIC, OFFSET_CRC - OFFSET_MAGIC);
@@ -132,8 +158,11 @@ public final class MessageCodec {
         if (magic != MAGIC) {
             return DecodeResult.CORRUPT_RES;
         }
+        int topicLen = buf.getShort(pos + OFFSET_TOPIC_LEN) & 0xFFFF;
         int payloadLen = buf.getInt(pos + OFFSET_PAYLOAD_LEN);
-        if (payloadLen != total - HEADER_SIZE) {
+        if (topicLen > MAX_TOPIC_LENGTH
+                || payloadLen < 0
+                || HEADER_SIZE + topicLen + payloadLen != total) {
             return DecodeResult.CORRUPT_RES;
         }
         CRC32 crc32 = new CRC32();
@@ -146,12 +175,19 @@ public final class MessageCodec {
         if ((int) crc32.getValue() != buf.getInt(pos + OFFSET_CRC)) {
             return DecodeResult.CORRUPT_RES;
         }
+        byte[] topic = new byte[topicLen];
         byte[] payload = new byte[payloadLen];
-        ByteBuffer payloadView = buf.duplicate();
-        payloadView.position(pos + OFFSET_PAYLOAD);
-        payloadView.get(payload);
+        ByteBuffer topicView = buf.duplicate();
+        topicView.position(pos + HEADER_SIZE);
+        topicView.get(topic);
+        if (payloadLen > 0) {
+            ByteBuffer payloadView = buf.duplicate();
+            payloadView.position(pos + HEADER_SIZE + topicLen);
+            payloadView.get(payload);
+        }
         long timestamp = buf.getLong(pos + OFFSET_TIMESTAMP);
         long keyHash = buf.getLong(pos + OFFSET_KEY_HASH);
-        return new DecodeResult(DecodeStatus.OK, total, new Message(timestamp, keyHash, payload));
+        return new DecodeResult(DecodeStatus.OK, total,
+                new Message(timestamp, keyHash, new String(topic, StandardCharsets.UTF_8), payload));
     }
 }

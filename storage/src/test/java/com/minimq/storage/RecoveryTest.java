@@ -21,11 +21,13 @@ class RecoveryTest {
 
     private static final int SEGMENT = 64 * 1024;
 
+    private static final String TOPIC = "t"; // 1 UTF-8 byte => record = 31 + 1 + payload
+
     private static Message msg(int i, int payloadSize) {
         byte[] payload = new byte[payloadSize];
         payload[0] = (byte) i;
         payload[payloadSize - 1] = (byte) i;
-        return new Message(1_700_000_000_000L + i, i, payload);
+        return new Message(1_700_000_000_000L + i, i, TOPIC, payload);
     }
 
     /**
@@ -87,7 +89,8 @@ class RecoveryTest {
             }
         }
         // Corrupt a payload byte on disk, after the mapping is released.
-        flipByteOnDisk(tempDir, offsetOfCorrupted + MessageCodec.OFFSET_PAYLOAD + 7);
+        // payload starts at HEADER_SIZE + topicLen(1) = 32.
+        flipByteOnDisk(tempDir, offsetOfCorrupted + MessageCodec.HEADER_SIZE + 1 + 7);
 
         try (CommitLog log = CommitLog.open(tempDir, SEGMENT)) {
             assertEquals(offsetOfCorrupted, log.maxOffset(),
@@ -195,7 +198,8 @@ class RecoveryTest {
         try (CommitLog log = CommitLog.open(tempDir, SEGMENT)) {
             log.append(msg(0, 100));
         }
-        flipByteOnDisk(tempDir, MessageCodec.OFFSET_PAYLOAD + 3); // record #1 payload
+        // payload byte of record #1: HEADER_SIZE + topicLen(1) + 3.
+        flipByteOnDisk(tempDir, MessageCodec.HEADER_SIZE + 1 + 3);
 
         try (Recovery.Result result = Recovery.recover(tempDir, SEGMENT)) {
             assertEquals(0, result.recoveredMessages);

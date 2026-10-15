@@ -20,6 +20,16 @@
       <artifactId>mini-mq-storage</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>com.minimq</groupId>
+      <artifactId>mini-mq-broker</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.minimq</groupId>
+      <artifactId>mini-mq-client</artifactId>
+      <version>${project.version}</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -29,9 +39,16 @@
         <artifactId>exec-maven-plugin</artifactId>
         <version>3.1.0</version>
         <configuration>
-          <mainClass>com.minimq.bench.BenchV0</mainClass>
+          <!-- Property placeholder so -Dexec.mainClass=... can override the
+               default (plain <mainClass> XML config always wins over the
+               command line, which would pin every run to BenchV0). -->
+          <mainClass>${exec.mainClass}</mainClass>
         </configuration>
       </plugin>
     </plugins>
   </build>
+
+  <properties>
+    <exec.mainClass>com.minimq.bench.BenchV0</exec.mainClass>
+  </properties>
 </project>

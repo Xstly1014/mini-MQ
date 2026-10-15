@@ -101,6 +101,64 @@ public class CommitLog implements Closeable {
         current = next;
     }
 
+    /**
+     * Reads up to {@code maxCount} valid records starting at global offset
+     * {@code fromOffset} (the FETCH consume path). Segments are contiguous
+     * (each starts at a multiple of segmentSize), so the starting segment is
+     * located arithmetically. A tail hole (EMPTY / INCOMPLETE at a sealed
+     * segment's end) skips to the next segment, mirroring {@link #iterator}.
+     *
+     * @throws IllegalStateException on a CORRUPT record — recovery truncated
+     *                               the tail at open, so reaching one means on-disk
+     *                               damage after
+     *                               open or a bug in the write path.
+     */
+    public List<Message> readFrom(long fromOffset, int maxCount) {
+        if (maxCount <= 0 || fromOffset < 0) {
+            return new ArrayList<Message>();
+        }
+        List<Message> out = new ArrayList<Message>(Math.min(maxCount, 256));
+        int idx = (int) (fromOffset / segmentSize);
+        if (idx >= segments.size()) {
+            return out;
+        }
+        while (idx < segments.size() && out.size() < maxCount) {
+            MappedFile seg = segments.get(idx);
+            int pos = (idx * segmentSize == fromOffset / segmentSize * segmentSize
+                    && seg.fileFromOffset() <= fromOffset)
+                            ? (int) (fromOffset - seg.fileFromOffset())
+                            : 0;
+            pos = (int) Math.min(pos, seg.fileSize());
+            boolean skipToNext = false;
+            while (out.size() < maxCount && pos <= seg.wrotePosition() - MessageCodec.HEADER_SIZE) {
+                MessageCodec.DecodeResult r = MessageCodec.decode(
+                        seg.slice(pos, seg.wrotePosition()), 0);
+                switch (r.status) {
+                    case OK:
+                        Message msg = r.message;
+                        msg.setOffset(seg.fileFromOffset() + pos);
+                        out.add(msg);
+                        pos += r.size;
+                        break;
+                    case EMPTY:
+                    case INCOMPLETE:
+                        // tail hole of a sealed segment: continue in the next one
+                        skipToNext = true;
+                        break;
+                    case CORRUPT:
+                    default:
+                        throw new IllegalStateException("corrupt record at global offset "
+                                + (seg.fileFromOffset() + pos) + " in " + seg.getFile());
+                }
+                if (skipToNext) {
+                    break;
+                }
+            }
+            idx++;
+        }
+        return out;
+    }
+
     /** Flushes dirty pages of the active segment (msync semantics). */
     public void flush() {
         current.flush();

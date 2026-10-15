@@ -1,21 +1,27 @@
 package com.minimq.storage;
 
 /**
- * Immutable message POJO. v0 carries only the fields needed by the storage kernel:
- * timestamp, key hash and opaque payload bytes. Topic/queue mapping arrives in M1.
+ * Immutable message POJO (format v1.1): timestamp, key hash, topic and opaque
+ * payload bytes. Key hash carries the idempotency key hash used by the
+ * producer SDK; topic routes fetch filtering until ConsumeQueue arrives in M2.
  */
 public class Message {
 
     private final long timestamp;
     private final long keyHash;
+    private final String topic;
     private final byte[] payload;
 
-    /** Global physical offset in the CommitLog, assigned by {@link CommitLog#append}. */
+    /**
+     * Global physical offset in the CommitLog, assigned by
+     * {@link CommitLog#append}.
+     */
     private long offset = -1L;
 
-    public Message(long timestamp, long keyHash, byte[] payload) {
+    public Message(long timestamp, long keyHash, String topic, byte[] payload) {
         this.timestamp = timestamp;
         this.keyHash = keyHash;
+        this.topic = topic;
         this.payload = payload;
     }
 
@@ -25,6 +31,10 @@ public class Message {
 
     public long getKeyHash() {
         return keyHash;
+    }
+
+    public String getTopic() {
+        return topic;
     }
 
     public byte[] getPayload() {
@@ -42,6 +52,7 @@ public class Message {
     @Override
     public String toString() {
         return "Message{offset=" + offset + ", timestamp=" + timestamp
-                + ", keyHash=" + keyHash + ", payloadSize=" + payload.length + '}';
+                + ", keyHash=" + keyHash + ", topic='" + topic
+                + "', payloadSize=" + payload.length + '}';
     }
 }

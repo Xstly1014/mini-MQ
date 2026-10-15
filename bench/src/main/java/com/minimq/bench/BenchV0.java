@@ -38,7 +38,8 @@ public final class BenchV0 {
             throw new IOException("cannot create " + dir);
         }
 
-        int recordSize = MessageCodec.HEADER_SIZE + payloadSize;
+        int recordSize = MessageCodec.sizeOf(
+                new Message(42L, 42L, "bench", new byte[payloadSize]));
         System.out.printf("# mini-MQ bench-v0  count=%d  payload=%dB  record=%dB  forceEveryN=%d%n",
                 count, payloadSize, recordSize, forceEveryN);
         System.out.println();
@@ -68,7 +69,7 @@ public final class BenchV0 {
 
     private static Result runMmap(File dir, String mode, int count, int payloadSize,
             int forceEvery, String note) throws IOException {
-        byte[] record = MessageCodec.encode(new Message(42L, 42L, new byte[payloadSize]));
+        byte[] record = MessageCodec.encode(new Message(42L, 42L, "bench", new byte[payloadSize]));
         long totalBytes = (long) (WARMUP + count) * record.length;
         File file = modeFile(dir, mode);
         MappedFile mf = new MappedFile(file, (int) totalBytes);
@@ -98,7 +99,7 @@ public final class BenchV0 {
 
     private static Result runChannel(File dir, String mode, int count, int payloadSize,
             String note) throws IOException {
-        byte[] record = MessageCodec.encode(new Message(42L, 42L, new byte[payloadSize]));
+        byte[] record = MessageCodec.encode(new Message(42L, 42L, "bench", new byte[payloadSize]));
         long totalBytes = (long) (WARMUP + count) * record.length;
         File file = modeFile(dir, mode);
         try (RandomAccessFile raf = new RandomAccessFile(file, "rw")) {
