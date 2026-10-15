@@ -1,0 +1,24 @@
+# build
+target/
+*.class
+
+# ide
+.idea/
+*.iml
+.vscode/
+.trae/
+
+# bench data & profiling artifacts
+data/
+results/
+*.jfr
+*.svg
+
+# internal planning documents & resume files (never push to GitHub)
+docs/*.html
+docs/resume*.tex
+docs/简历.pdf
+
+# os
+.DS_Store
+Thumbs.db
