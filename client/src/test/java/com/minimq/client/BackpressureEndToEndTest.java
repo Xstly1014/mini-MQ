@@ -21,6 +21,8 @@ import com.minimq.protocol.Frame;
 import com.minimq.protocol.MessageType;
 import com.minimq.protocol.gen.MqProto;
 import com.minimq.storage.CommitLog;
+import com.minimq.storage.ConsumeQueueStore;
+import com.minimq.storage.FlushMode;
 
 /**
  * Full backpressure chain over loopback, the M1 manual acceptance item
@@ -63,8 +65,10 @@ class BackpressureEndToEndTest {
                 .businessThreads(1)
                 .businessQueueCapacity(1)) {
             @Override
-            protected BrokerRequestHandler createRequestHandler(CommitLog commitLog) {
-                return new BrokerRequestHandler(commitLog, 256) {
+            protected BrokerRequestHandler createRequestHandler(CommitLog commitLog,
+                    ConsumeQueueStore consumeQueues) {
+                return new BrokerRequestHandler(commitLog, consumeQueues,
+                        FlushMode.OS_FLUSH, 5_000L, false) {
                     @Override
                     public Frame handle(Frame request) {
                         try {
@@ -76,7 +80,7 @@ class BackpressureEndToEndTest {
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
                         }
-                        return super.handle(request);
+                        return (Frame) super.handle(request);
                     }
                 };
             }

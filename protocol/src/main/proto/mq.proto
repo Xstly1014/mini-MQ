@@ -1,8 +1,22 @@
-// mini-MQ wire protocol bodies (M1).
+// mini-MQ wire protocol bodies (M1; FETCH_RESP layout v1.2 in M2).
 //
 // The frame layer (see docs/protocol.md) is a 16-byte fixed header:
 //   MAGIC(2B 0xCACE) VERSION(1B 0x01) TYPE(1B) REQUEST_ID(8B) BODY_LENGTH(4B)
 // and BODY is one of the messages below, serialized with protobuf.
+//
+// M2 zero-copy: a FETCH_RESP body is [4B meta_len][FetchResponse][raw]:
+//   - meta_len is big-endian (frame-header convention, NOT storage
+//     little-endian) and bounds the protobuf meta so the raw tail can start
+//     right after it;
+//   - zero_copy = false: records carry their payload inline, raw is empty
+//     (the M1 shape, prefixed);
+//   - zero_copy = true: records carry no payload; raw holds the CommitLog
+//     bytes for [records[0].offset, last record end) verbatim — the broker
+//     sends them with FileRegion/sendfile, the consumer locates record i at
+//     raw position (offset_i - offset_0) and decodes with the storage codec.
+//     NOTE: the raw span may contain foreign-topic records in between (the
+//     CommitLog is a single mixed log); the consumer only decodes the
+//     offsets listed in meta. Fine-grained access control arrives with M3+.
 syntax = "proto3";
 
 package minimq;
@@ -62,6 +76,18 @@ message RecordData {
   // The original key string is not returned (storage keeps only the hash);
   // M4 idempotent consumption keys off this value.
   int64 key_hash = 6;
+  // M2 zero-copy: encoded record size in bytes. Filled in zero_copy
+  // responses (where payload stays empty and travels in the raw tail);
+  // legacy responses leave it 0 and rely on the inline payload.
+  int32 size = 7;
+  // M2 zero-copy self-describing payload location: payload_offset = bytes
+  // from the record's start (in the raw tail) to its payload; payload_len =
+  // payload bytes. Together with `offset` this lets the consumer slice the
+  // payload out of the raw tail WITHOUT knowing the storage record layout —
+  // the format stays owned by the storage codec. Legacy responses leave
+  // both 0 and rely on the inline payload.
+  int32 payload_offset = 8;
+  int32 payload_len = 9;
 }
 
 // TYPE = FETCH_RESP
@@ -73,6 +99,8 @@ message FetchResponse {
   int64 next_offset = 2;
   // M3 replication high watermark; equals broker max offset until then.
   int64 high_watermark = 3;
+  // M2 zero-copy: see the body-layout note at the top of this file.
+  bool zero_copy = 4;
 }
 
 // ---------- offset commit (defined in M1, broker-side storage from M3) ----------

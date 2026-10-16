@@ -74,6 +74,38 @@ class CommitLogTest {
     }
 
     /**
+     * The 2 GiB boundary regression (M2 soak bug): readFrom used
+     * {@code idx * segmentSize} — an int product — to decide whether the
+     * cursor falls inside a segment. At global offset 2^31 (segment 2 of
+     * 1 GiB) the product overflows negative, the range check failed and pos
+     * silently reset to 0: the ConsumeQueue dispatcher re-read the segment
+     * head forever, never advancing (consume starved, CPU spun). Only a
+     * store past 2 GiB can hit it, so the segment chain is hand-built here
+     * (sparse pre-allocated files) instead of appending 2 GiB of data.
+     */
+    @Test
+    void readFromLocatesOffsetsPastThe2GiBIntOverflowBoundary() throws IOException {
+        int segSize = CommitLog.DEFAULT_SEGMENT_SIZE; // 1 GiB: segment 2 spans 2^31
+        for (long base : new long[] { 0L, 1L << 30, 1L << 31 }) {
+            MappedFile seg = new MappedFile(new File(tempDir, MappedFile.fileName(base)), segSize);
+            seg.close(); // keep the sparse pre-allocated file, release the mapping
+        }
+        try (CommitLog log = CommitLog.open(tempDir, segSize)) {
+            assertEquals(3, log.segmentCount());
+            Message first = new Message(1L, 1, "big", makePayload(1, 32));
+            Message second = new Message(2L, 2, "big", makePayload(2, 32));
+            long off1 = log.append(first);
+            long off2 = log.append(second);
+            assertEquals(1L << 31, off1, "appends must land in the hand-built 3rd segment");
+
+            // read from the segment head and from inside it: both must return
+            // records at/after the cursor, not rewound segment-head data
+            assertEquals(off1, log.readFrom(off1, 8).get(0).getOffset());
+            assertEquals(off2, log.readFrom(off2, 8).get(0).getOffset());
+        }
+    }
+
+    /**
      * The 100k-record soak test: append 100k fixed-size messages across ~13
      * x 1 MiB segments, reopen, replay the whole log and verify payload and
      * offset sequence end to end.

@@ -20,6 +20,8 @@ import com.minimq.protocol.Frame;
 import com.minimq.protocol.MessageType;
 import com.minimq.protocol.gen.MqProto;
 import com.minimq.storage.CommitLog;
+import com.minimq.storage.ConsumeQueueStore;
+import com.minimq.storage.FlushMode;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 
@@ -31,11 +33,13 @@ class DispatcherHandlerTest {
     private static final int SEGMENT_SIZE = 256 * 1024;
 
     private CommitLog commitLog;
+    private ConsumeQueueStore consumeQueues;
     private ThreadPoolExecutor pool;
 
     @BeforeEach
     void setUp() throws IOException {
-        commitLog = CommitLog.open(tempDir.toFile(), SEGMENT_SIZE);
+        commitLog = CommitLog.open(tempDir.resolve("log").toFile(), SEGMENT_SIZE);
+        consumeQueues = ConsumeQueueStore.open(tempDir.resolve("cq").toFile(), commitLog);
         // 1 thread + queue of 1: the smallest pool that can still saturate,
         // so the rejection path is deterministic to trigger.
         pool = new ThreadPoolExecutor(1, 1, 60L, TimeUnit.SECONDS,
@@ -54,7 +58,13 @@ class DispatcherHandlerTest {
     @AfterEach
     void tearDown() throws IOException {
         pool.shutdownNow();
+        consumeQueues.close();
         commitLog.close();
+    }
+
+    /** Default handler over this test's log + index store (OS_FLUSH tier). */
+    private BrokerRequestHandler newHandler() {
+        return new BrokerRequestHandler(commitLog, consumeQueues, FlushMode.OS_FLUSH, 5_000L, false);
     }
 
     /** Drains business-pool results from the embedded channel, with timeout. */
@@ -74,7 +84,7 @@ class DispatcherHandlerTest {
     @Test
     void dispatchesProduceToBusinessPoolAndWritesAck() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(
-                new DispatcherHandler(pool, new BrokerRequestHandler(commitLog, 256)));
+                new DispatcherHandler(pool, newHandler()));
 
         // writeInbound returns false here: the dispatcher consumed the frame,
         // nothing reaches the pipeline tail — that is the expected path.
@@ -95,7 +105,8 @@ class DispatcherHandlerTest {
     void saturatedPoolAnswersRetryLaterWithoutBlockingTheEventLoop() throws Exception {
         final CountDownLatch entered = new CountDownLatch(1);
         final CountDownLatch release = new CountDownLatch(1);
-        BrokerRequestHandler blocking = new BrokerRequestHandler(commitLog, 256) {
+        BrokerRequestHandler blocking = new BrokerRequestHandler(
+                commitLog, consumeQueues, FlushMode.OS_FLUSH, 5_000L, false) {
             @Override
             public Frame handle(Frame request) {
                 entered.countDown();
@@ -104,7 +115,7 @@ class DispatcherHandlerTest {
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
-                return super.handle(request);
+                return (Frame) super.handle(request);
             }
         };
         EmbeddedChannel ch = new EmbeddedChannel(new DispatcherHandler(pool, blocking));
@@ -139,7 +150,8 @@ class DispatcherHandlerTest {
 
     @Test
     void handlerFailureTurnsIntoErrorResponseNotSilence() throws Exception {
-        BrokerRequestHandler failing = new BrokerRequestHandler(commitLog, 256) {
+        BrokerRequestHandler failing = new BrokerRequestHandler(
+                commitLog, consumeQueues, FlushMode.OS_FLUSH, 5_000L, false) {
             @Override
             public Frame handle(Frame request) {
                 throw new IllegalStateException("boom");

@@ -160,4 +160,57 @@ class ClientBrokerSmokeTest {
             consumer.close();
         }
     }
+
+    /**
+     * M2 zero-copy end-to-end: broker sends FETCH responses as head +
+     * FileRegions (sendfile); the raw span contains foreign-topic records,
+     * the consumer must still slice exactly its own payloads, in order,
+     * with the offset cursor intact.
+     */
+    @Test
+    void zeroCopyFetchRoundTripWithMixedTopics() throws Exception {
+        BrokerServer zcServer = new BrokerServer(BrokerConfig.defaults()
+                .port(0)
+                .storeDir(tempDir.resolve("zc-broker-data").toFile())
+                .segmentSize(256 * 1024)
+                .zeroCopyFetch(true));
+        zcServer.start();
+        try {
+            MQProducer producer = MQProducer.connect("127.0.0.1", zcServer.port(),
+                    3000, 64 * 1024, 20);
+            try {
+                for (int i = 0; i < 10; i++) {
+                    producer.send("noise", ("noise-" + i).getBytes("UTF-8")).get(5, TimeUnit.SECONDS);
+                    producer.send("wanted", ("w-" + i).getBytes("UTF-8")).get(5, TimeUnit.SECONDS);
+                }
+            } finally {
+                producer.close();
+            }
+
+            MQConsumer consumer = MQConsumer.subscribe("127.0.0.1", zcServer.port(),
+                    "wanted", "g-zc", tempDir.resolve("zc-offsets").toFile(), 32, 3000);
+            try {
+                List<String> seen = new ArrayList<String>();
+                long deadline = System.currentTimeMillis() + 10_000;
+                while (System.currentTimeMillis() < deadline) {
+                    List<ClientRecord> batch = consumer.poll();
+                    for (ClientRecord r : batch) {
+                        seen.add(new String(r.getPayload(), "UTF-8"));
+                    }
+                    if (seen.size() >= 10 && batch.isEmpty()) {
+                        break; // caught up
+                    }
+                }
+                assertEquals(10, seen.size(), "exactly the wanted records, zero noise");
+                for (int i = 0; i < 10; i++) {
+                    assertEquals("w-" + i, seen.get(i), "order must survive zero-copy slicing");
+                }
+                consumer.commit();
+            } finally {
+                consumer.close();
+            }
+        } finally {
+            zcServer.shutdown();
+        }
+    }
 }

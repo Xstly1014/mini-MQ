@@ -50,5 +50,8 @@
 
   <properties>
     <exec.mainClass>com.minimq.bench.BenchV0</exec.mainClass>
+    <!-- Tooling module only: JFR allocation profiling (M2 task 3) needs
+         jdk.jfr (JDK 11+). Core modules stay on the project-wide release 8. -->
+    <maven.compiler.release>17</maven.compiler.release>
   </properties>
 </project>

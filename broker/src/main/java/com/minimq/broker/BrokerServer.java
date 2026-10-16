@@ -1,5 +1,6 @@
 package com.minimq.broker;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -10,6 +11,9 @@ import java.util.logging.Logger;
 import com.minimq.protocol.FrameDecoder;
 import com.minimq.protocol.FrameEncoder;
 import com.minimq.storage.CommitLog;
+import com.minimq.storage.ConsumeQueueStore;
+import com.minimq.storage.FlushMode;
+import com.minimq.storage.FlushService;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -48,6 +52,8 @@ public class BrokerServer {
     private final Object lifecycleLock = new Object();
 
     private CommitLog commitLog;
+    private ConsumeQueueStore consumeQueueStore;
+    private FlushService flushService;
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
     private ThreadPoolExecutor businessPool;
@@ -65,9 +71,20 @@ public class BrokerServer {
                 return;
             }
             commitLog = CommitLog.open(config.getStoreDir(), config.getSegmentSize());
-            BrokerRequestHandler handler = createRequestHandler(commitLog);
+            // ConsumeQueue root sits NEXT TO the commitlog dir (same store
+            // root, e.g. data/commitlog + data/consumequeue). The dispatcher
+            // replays/rebuilds the index tail at open; FETCH goes through it.
+            consumeQueueStore = ConsumeQueueStore.open(consumeQueueRoot(config), commitLog);
+            BrokerRequestHandler handler = createRequestHandler(commitLog, consumeQueueStore);
             businessPool = createBusinessPool(config);
             DispatcherHandler dispatcher = new DispatcherHandler(businessPool, handler);
+            // SYNC/ASYNC tiers need the group-commit flush thread; OS_FLUSH
+            // (M1 behavior) skips it entirely.
+            if (config.getFlushMode() != FlushMode.OS_FLUSH) {
+                flushService = new FlushService(
+                        commitLog, config.getFlushLingerUs(), config.getFlushBatchCount());
+                flushService.start();
+            }
 
             bossGroup = new NioEventLoopGroup(1, new DefaultThreadFactory("mini-mq-boss"));
             workerGroup = new NioEventLoopGroup(config.getWorkerThreads(),
@@ -139,6 +156,15 @@ public class BrokerServer {
         return started;
     }
 
+    /**
+     * The group-commit flush thread, or null in OS_FLUSH. Exposed for the
+     * bench: forceSweeps() is the aggregation observability (messages per
+     * force = how well the linger window batches concurrent writers).
+     */
+    public FlushService flushService() {
+        return flushService;
+    }
+
     /** Idempotent; safe to call from a shutdown hook or directly. */
     public void shutdown() {
         synchronized (lifecycleLock) {
@@ -165,7 +191,18 @@ public class BrokerServer {
                 // 3. stop IO threads
                 bossGroup.shutdownGracefully(0, 2, TimeUnit.SECONDS).syncUninterruptibly();
                 workerGroup.shutdownGracefully(0, 2, TimeUnit.SECONDS).syncUninterruptibly();
-                // 4. flush dirty pages and release the mmaps
+                // 4. final force (covers everything appended, wakes any SYNC
+                //    waiter still parked) then flush and close storage
+                if (flushService != null) {
+                    flushService.close();
+                    flushService = null;
+                }
+                // 5. stop the index dispatcher (it reads the log; must not
+                //    outlive it), force the queues it filled
+                if (consumeQueueStore != null) {
+                    consumeQueueStore.close();
+                    consumeQueueStore = null;
+                }
                 commitLog.flush();
                 commitLog.close();
             } catch (InterruptedException e) {
@@ -186,8 +223,21 @@ public class BrokerServer {
      * Request handler factory; tests override this to inject slow/failing
      * handlers for backpressure and failure-path integration tests.
      */
-    protected BrokerRequestHandler createRequestHandler(CommitLog commitLog) {
-        return new BrokerRequestHandler(commitLog, config.getFetchScanBudget());
+    protected BrokerRequestHandler createRequestHandler(CommitLog commitLog,
+            ConsumeQueueStore consumeQueues) {
+        return new BrokerRequestHandler(commitLog, consumeQueues,
+                config.getFlushMode(), config.getFlushAwaitTimeoutMs(),
+                config.isZeroCopyFetch());
+    }
+
+    /**
+     * {@code data/commitlog} -> {@code data/consumequeue}; a store dir without
+     * a parent keeps the consumequeue dir in the working directory.
+     */
+    private static File consumeQueueRoot(BrokerConfig config) {
+        File storeDir = config.getStoreDir();
+        File parent = storeDir.getParentFile();
+        return parent != null ? new File(parent, "consumequeue") : new File("consumequeue");
     }
 
     private static ThreadPoolExecutor createBusinessPool(BrokerConfig config) {
