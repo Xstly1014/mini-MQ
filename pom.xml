@@ -69,6 +69,11 @@
             <systemPropertyVariables>
               <io.netty.leakDetection.level>paranoid</io.netty.leakDetection.level>
             </systemPropertyVariables>
+            <!-- Real classpath on the fork's java.class.path (no manifest-only
+                 booter jar): MultiProcessClusterTest spawns cluster children
+                 with -cp ${java.class.path}, which must resolve the actual
+                 module classes, not a surefirebooter jar. -->
+            <useManifestOnlyJar>false</useManifestOnlyJar>
           </configuration>
         </plugin>
       </plugins>
