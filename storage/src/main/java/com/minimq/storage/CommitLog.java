@@ -122,6 +122,84 @@ public class CommitLog implements Closeable {
         return appendInternal(encoded, encoded.length, null);
     }
 
+    /**
+     * Replication append (M3): the follower writes the leader's raw record
+     * bytes — verbatim, no decode/encode roundtrip — at the exact global
+     * offset the leader says they belong to. Any mismatch with the local
+     * frontier means the logs diverged and the epoch arbitration missed it;
+     * refusing loudly beats silently interleaving two histories.
+     *
+     * @return the new log end (== expectedOffset + length)
+     */
+    public long appendReplicated(long expectedOffset, byte[] encoded) throws IOException {
+        synchronized (appendLock) {
+            if (expectedOffset != appendFrontier) {
+                throw new IOException("replication offset mismatch: leader says " + expectedOffset
+                        + ", local log ends at " + appendFrontier + " — divergence upstream of append");
+            }
+            int length = encoded.length;
+            if (length > segmentSize) {
+                throw new IOException("record " + length
+                        + "B exceeds segment size " + segmentSize + "B");
+            }
+            if (current.free() < length) {
+                roll();
+            }
+            int pos = current.append(encoded, 0, length);
+            if (pos < 0) {
+                throw new IOException("append failed unexpectedly in segment " + current.getFile());
+            }
+            appendFrontier = expectedOffset + length;
+            appendedCount++;
+            return appendFrontier;
+        }
+    }
+
+    /**
+     * Epoch-arbitrated truncation (M3): rewinds the log to {@code offset} so
+     * a superseded leader's dirty tail can be overwritten by the current
+     * leader's history. The remainder of the containing segment is ZEROED —
+     * not merely abandoned — because mmap bytes linger until overwritten,
+     * and a crash before the overwrite would let recovery resurrect the
+     * truncated records (CRC-valid garbage from another lineage). Segments
+     * entirely beyond the point are deleted; their files would otherwise
+     * pass recovery with stale-but-valid records after a restart.
+     *
+     * <p>
+     * Callers must also roll back derived state (ConsumeQueue index,
+     * dispatch cursor, epoch checkpoint tail) — this method only owns the
+     * log. Idempotent for offsets at/after the current end.
+     */
+    public void truncateTo(long offset) throws IOException {
+        synchronized (appendLock) {
+            if (offset < 0 || offset > appendFrontier) {
+                throw new IOException("truncate to " + offset + " outside [0, " + appendFrontier + ")");
+            }
+            if (offset == appendFrontier) {
+                return; // nothing to roll back
+            }
+            // Drop whole segments strictly after the one containing offset.
+            while (segments.size() > 1) {
+                MappedFile last = segments.get(segments.size() - 1);
+                if (last.fileFromOffset() > offset) {
+                    last.close();
+                    if (!last.getFile().delete()) {
+                        throw new IOException("cannot delete truncated segment " + last.getFile());
+                    }
+                    segments.remove(segments.size() - 1);
+                } else {
+                    break;
+                }
+            }
+            current = segments.get(segments.size() - 1);
+            int pos = (int) (offset - current.fileFromOffset());
+            // Zero [pos, wrotePosition): dead bytes must not survive a crash
+            // as resurrection candidates for recovery's CRC scan.
+            current.truncate(pos, current.wrotePosition());
+            appendFrontier = offset;
+        }
+    }
+
     /** length is authoritative: buf may be a larger pooled scratch array. */
     private long appendInternal(byte[] encoded, int length, Message msg) throws IOException {
         if (length > segmentSize) {
@@ -286,6 +364,72 @@ public class CommitLog implements Closeable {
                     break;
                 }
             }
+            idx++;
+        }
+        return out;
+    }
+
+    /** One verbatim record for replication: its global offset and raw bytes. */
+    public static final class RawRecord {
+        public final long offset;
+        public final byte[] raw;
+
+        public RawRecord(long offset, byte[] raw) {
+            this.offset = offset;
+            this.raw = raw;
+        }
+    }
+
+    /**
+     * Reads raw record bytes starting at {@code fromOffset} — the leader
+     * side of FOLLOWER_FETCH (M3). No decode, no topic filter: the bytes
+     * ARE the log, and the follower appends them verbatim. The batch stops
+     * at {@code maxBytes} or the log end, whichever first; tail holes in
+     * sealed segments skip forward exactly like {@link #readFrom}.
+     *
+     * <p>
+     * Only the header is validated (size/magic/length-coherence): the CRC
+     * was checked by recovery at open and by the writer at append; a full
+     * payload copy would double the cost of replication for zero added
+     * safety on this side of the wire.
+     */
+    public List<RawRecord> readRawFrom(long fromOffset, int maxBytes) {
+        List<RawRecord> out = new ArrayList<RawRecord>();
+        if (maxBytes <= 0 || fromOffset < 0) {
+            return out;
+        }
+        List<MappedFile> snapshot = segmentSnapshot();
+        int idx = (int) (fromOffset / segmentSize);
+        if (idx >= snapshot.size()) {
+            return out;
+        }
+        int budget = maxBytes;
+        while (idx < snapshot.size() && budget > 0) {
+            MappedFile seg = snapshot.get(idx);
+            // Range check against the segment header, not idx arithmetic
+            // (the 2GiB int-overflow lesson from readFrom).
+            int pos = (seg.fileFromOffset() <= fromOffset
+                    && fromOffset < seg.fileFromOffset() + (long) seg.fileSize())
+                            ? (int) (fromOffset - seg.fileFromOffset())
+                            : 0;
+            pos = (int) Math.min(pos, seg.fileSize());
+            while (budget > 0 && pos <= seg.wrotePosition() - MessageCodec.HEADER_SIZE) {
+                MessageCodec.HeaderResult h = MessageCodec.decodeHeader(
+                        seg.slice(pos, seg.wrotePosition()), 0);
+                if (h.status != MessageCodec.DecodeStatus.OK
+                        || pos + h.size > seg.wrotePosition()) {
+                    // EMPTY/INCOMPLETE tail hole of a sealed segment — the
+                    // next segment continues the stream.
+                    break;
+                }
+                byte[] raw = new byte[h.size];
+                seg.slice(pos, pos + h.size).get(raw);
+                out.add(new RawRecord(seg.fileFromOffset() + pos, raw));
+                pos += h.size;
+                budget -= h.size;
+            }
+            // sealed-segment tail holes and fully drained segments alike:
+            // the next segment (if any) continues the stream
             idx++;
         }
         return out;

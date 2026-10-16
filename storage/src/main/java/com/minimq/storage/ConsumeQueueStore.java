@@ -72,6 +72,14 @@ public final class ConsumeQueueStore implements Closeable {
     private volatile boolean running = true;
     /** Dispatch cursor: everything below it is indexed in every queue. */
     private volatile long dispatchFrom;
+    /**
+     * Serializes dispatch rounds against replication truncation (M3): both
+     * hold this lock, so the dispatcher can never read a log mid-truncation
+     * nor index bytes the truncated log no longer backs. A round is a few
+     * hundred appends; truncation is a once-per-epoch event — blocking is
+     * fine, interleaving is not.
+     */
+    private final Object truncateLock = new Object();
     /** Queue forced by the dispatcher (bench observability). */
     private volatile long indexForceCount;
 
@@ -174,42 +182,18 @@ public final class ConsumeQueueStore implements Closeable {
 
     private void dispatchLoop() {
         while (running) {
-            long logEnd = commitLog.maxOffset();
-            if (dispatchFrom >= logEnd) {
-                park();
-                continue;
-            }
+            boolean progressed = false;
             try {
-                List<Message> batch = commitLog.readFrom(dispatchFrom, DISPATCH_BATCH);
-                if (batch.isEmpty()) {
-                    // Defensive: readFrom returned nothing although the cursor
-                    // is behind the log end (should not happen — recovery
-                    // keeps [0, maxOffset) contiguous). Retry, don't skip.
-                    park();
-                    continue;
-                }
-                ConsumeQueue lastTouched = null;
-                for (Message msg : batch) {
-                    if (!isIndexableTopic(msg.getTopic())) {
-                        skipUnindexable(msg);
-                        continue;
+                synchronized (truncateLock) {
+                    // Re-check INSIDE the lock: a truncation may have just
+                    // moved the cursor backwards past this log end.
+                    long logEnd = commitLog.maxOffset();
+                    if (dispatchFrom < logEnd) {
+                        List<Message> batch = commitLog.readFrom(dispatchFrom, DISPATCH_BATCH);
+                        if (!batch.isEmpty()) {
+                            progressed = dispatchRound(batch);
+                        }
                     }
-                    Long cursorBoxed = cursors.get(msg.getTopic());
-                    long cursor = cursorBoxed == null ? 0L : cursorBoxed.longValue();
-                    if (msg.getOffset() < cursor) {
-                        continue; // this queue already indexed past it
-                    }
-                    ConsumeQueue q = getOrCreate(msg.getTopic());
-                    int size = MessageCodec.sizeOf(msg);
-                    q.append(msg.getOffset(), size);
-                    cursors.put(msg.getTopic(), msg.getOffset() + size);
-                    lastTouched = q;
-                }
-                Message last = batch.get(batch.size() - 1);
-                dispatchFrom = last.getOffset() + MessageCodec.sizeOf(last);
-                if (lastTouched != null) {
-                    lastTouched.forceAll(); // who writes, forces
-                    indexForceCount++;
                 }
             } catch (Throwable t) {
                 if (running) {
@@ -218,9 +202,80 @@ public final class ConsumeQueueStore implements Closeable {
                     // re-runs the same append; the queue is truncated-and-
                     // replayed on next open if anything did tear).
                     LOG.log(Level.WARNING, "dispatch round failed at " + dispatchFrom, t);
-                    park();
                 }
             }
+            if (!progressed) {
+                park();
+            }
+        }
+    }
+
+    /**
+     * One dispatch round — caller holds {@code truncateLock}, which is what
+     * makes read-from-log + append-to-index atomic against truncation.
+     *
+     * @return true if the cursor advanced (caller skips parking)
+     */
+    private boolean dispatchRound(List<Message> batch) throws IOException {
+        ConsumeQueue lastTouched = null;
+        for (Message msg : batch) {
+            if (!isIndexableTopic(msg.getTopic())) {
+                skipUnindexable(msg);
+                continue;
+            }
+            Long cursorBoxed = cursors.get(msg.getTopic());
+            long cursor = cursorBoxed == null ? 0L : cursorBoxed.longValue();
+            if (msg.getOffset() < cursor) {
+                continue; // this queue already indexed past it
+            }
+            ConsumeQueue q = getOrCreate(msg.getTopic());
+            int size = MessageCodec.sizeOf(msg);
+            q.append(msg.getOffset(), size);
+            cursors.put(msg.getTopic(), msg.getOffset() + size);
+            lastTouched = q;
+        }
+        Message last = batch.get(batch.size() - 1);
+        dispatchFrom = last.getOffset() + MessageCodec.sizeOf(last);
+        if (lastTouched != null) {
+            lastTouched.forceAll(); // who writes, forces
+            indexForceCount++;
+        }
+        return true;
+    }
+
+    /**
+     * Replication-driven truncation (M3): the leader's epoch checkpoint says
+     * the local tail belongs to a superseded lineage, so both the log and
+     * every derived index must rewind to {@code offset} before the current
+     * leader's history is fetched over it.
+     *
+     * <p>
+     * Ordering contract: log first, index second, all under
+     * {@code truncateLock} — the dispatcher is blocked for the whole span,
+     * so it can neither read a torn tail (between the two truncations) nor
+     * resurrect entries for bytes that no longer exist. Afterwards the
+     * cursors rewind to the laggard queue and the normal follow loop
+     * replays forward — the exact startup rule, applied live.
+     */
+    public void truncateLogAndIndex(long offset) throws IOException {
+        synchronized (truncateLock) {
+            commitLog.truncateTo(offset);
+            for (ConsumeQueue q : queues.values()) {
+                ConsumeQueue.Entry last = q.lastEntry();
+                while (last != null && last.end() > offset) {
+                    q.truncateToEntries(q.entryCount() - 1);
+                    last = q.lastEntry();
+                }
+            }
+            long laggard = Long.MAX_VALUE;
+            for (String topic : queues.keySet()) {
+                ConsumeQueue q = queues.get(topic);
+                ConsumeQueue.Entry last = q.lastEntry();
+                long cursor = last != null ? last.end() : 0L;
+                cursors.put(topic, cursor);
+                laggard = Math.min(laggard, cursor);
+            }
+            dispatchFrom = laggard == Long.MAX_VALUE ? 0L : laggard;
         }
     }
 

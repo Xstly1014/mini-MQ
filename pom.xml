@@ -14,6 +14,7 @@
   <modules>
     <module>storage</module>
     <module>protocol</module>
+    <module>replica</module>
     <module>broker</module>
     <module>client</module>
     <module>bench</module>

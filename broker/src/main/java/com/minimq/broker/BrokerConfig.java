@@ -1,6 +1,8 @@
 package com.minimq.broker;
 
 import java.io.File;
+import java.net.InetSocketAddress;
+import java.util.List;
 
 import com.minimq.storage.CommitLog;
 import com.minimq.storage.FlushMode;
@@ -42,8 +44,78 @@ public final class BrokerConfig {
      */
     private boolean zeroCopyFetch = false;
 
+    // ---- M3 cluster (replication & election) ----
+    /**
+     * This node's id in the cluster, or -1 for standalone (the M1/M2
+     * single-broker behavior: every request is served locally, the leader
+     * gate is always open, the HW equals the local log end).
+     */
+    private int nodeId = -1;
+    /**
+     * Full static cluster map, index == nodeId ("node-0": first entry).
+     * Standalone brokers leave this null.
+     */
+    private List<InetSocketAddress> clusterNodes = null;
+    /** acks=all floor: ISR below this refuses writes (ISR_TOO_SMALL). */
+    private int minIsr = 2;
+    /** ISR membership window: no catch-up within this = evicted (Kafka 0.10+). */
+    private long replicaLagMaxMs = 10_000;
+    /** Raft leader heartbeat period (etcd 10:1 shape against the timeout). */
+    private long heartbeatIntervalMs = 50;
+    /** Election timeout base; the actual timeout is randomized in [base, 2*base). */
+    private long electionTimeoutBaseMs = 300;
+    /** acks=all HW-wait park timeout: expiry answers ERROR, never a lying OK. */
+    private long replicationAwaitTimeoutMs = 5_000;
+    /** FOLLOWER_FETCH batch budget (bytes per replication round). */
+    private int replicaMaxFetchBytes = 1024 * 1024;
+
     public static BrokerConfig defaults() {
         return new BrokerConfig();
+    }
+
+    /** True when replication/election wiring should be assembled at all. */
+    public boolean isClustered() {
+        return nodeId >= 0 && clusterNodes != null && clusterNodes.size() > 1;
+    }
+
+    public BrokerConfig cluster(int nodeId, List<InetSocketAddress> nodes) {
+        if (nodes == null || nodeId < 0 || nodeId >= nodes.size()) {
+            throw new IllegalArgumentException(
+                    "cluster needs a node id within the node list");
+        }
+        this.nodeId = nodeId;
+        this.clusterNodes = nodes;
+        return this;
+    }
+
+    public BrokerConfig minIsr(int minIsr) {
+        this.minIsr = minIsr;
+        return this;
+    }
+
+    public BrokerConfig replicaLagMaxMs(long replicaLagMaxMs) {
+        this.replicaLagMaxMs = replicaLagMaxMs;
+        return this;
+    }
+
+    public BrokerConfig heartbeatIntervalMs(long heartbeatIntervalMs) {
+        this.heartbeatIntervalMs = heartbeatIntervalMs;
+        return this;
+    }
+
+    public BrokerConfig electionTimeoutBaseMs(long electionTimeoutBaseMs) {
+        this.electionTimeoutBaseMs = electionTimeoutBaseMs;
+        return this;
+    }
+
+    public BrokerConfig replicationAwaitTimeoutMs(long replicationAwaitTimeoutMs) {
+        this.replicationAwaitTimeoutMs = replicationAwaitTimeoutMs;
+        return this;
+    }
+
+    public BrokerConfig replicaMaxFetchBytes(int replicaMaxFetchBytes) {
+        this.replicaMaxFetchBytes = replicaMaxFetchBytes;
+        return this;
     }
 
     public BrokerConfig port(int port) {
@@ -143,5 +215,37 @@ public final class BrokerConfig {
 
     public boolean isZeroCopyFetch() {
         return zeroCopyFetch;
+    }
+
+    public int getNodeId() {
+        return nodeId;
+    }
+
+    public List<InetSocketAddress> getClusterNodes() {
+        return clusterNodes;
+    }
+
+    public int getMinIsr() {
+        return minIsr;
+    }
+
+    public long getReplicaLagMaxMs() {
+        return replicaLagMaxMs;
+    }
+
+    public long getHeartbeatIntervalMs() {
+        return heartbeatIntervalMs;
+    }
+
+    public long getElectionTimeoutBaseMs() {
+        return electionTimeoutBaseMs;
+    }
+
+    public long getReplicationAwaitTimeoutMs() {
+        return replicationAwaitTimeoutMs;
+    }
+
+    public int getReplicaMaxFetchBytes() {
+        return replicaMaxFetchBytes;
     }
 }

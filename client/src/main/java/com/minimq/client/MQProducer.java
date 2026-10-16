@@ -21,16 +21,16 @@ import com.minimq.protocol.gen.MqProto;
  * Producer SDK: batching + async callbacks.
  *
  * <ul>
- *   <li><b>Batch aggregation</b> — sends accumulate in a buffer and leave as
- *   one PRODUCE when the byte budget fills or linger expires (the client-side
- *   mirror of Kafka's batch.size / linger.ms, and of M2 group commit).</li>
- *   <li><b>maxInFlight = 1</b> — the next batch waits for the previous ack.
- *   With a single broker business pool this keeps same-topic order strict
- *   (order is append order). Kafka buys pipelining back with broker-side
- *   sequence numbers; that trade arrives later.</li>
- *   <li><b>RETRY_LATER / timeout</b> — retried with linear backoff on a
- *   scheduler (never a sleeping callback thread), bounded by maxRetries;
- *   exhausted batches fail their futures. At-least-once until M4 dedup.</li>
+ * <li><b>Batch aggregation</b> — sends accumulate in a buffer and leave as
+ * one PRODUCE when the byte budget fills or linger expires (the client-side
+ * mirror of Kafka's batch.size / linger.ms, and of M2 group commit).</li>
+ * <li><b>maxInFlight = 1</b> — the next batch waits for the previous ack.
+ * With a single broker business pool this keeps same-topic order strict
+ * (order is append order). Kafka buys pipelining back with broker-side
+ * sequence numbers; that trade arrives later.</li>
+ * <li><b>RETRY_LATER / timeout</b> — retried with linear backoff on a
+ * scheduler (never a sleeping callback thread), bounded by maxRetries;
+ * exhausted batches fail their futures. At-least-once until M4 dedup.</li>
  * </ul>
  */
 public final class MQProducer implements Closeable {
@@ -43,6 +43,12 @@ public final class MQProducer implements Closeable {
     private final int maxRetries;
     private final long retryBackoffMs;
     private final ScheduledExecutorService scheduler;
+    /**
+     * Durability span for every batch (M3). ACKS_1 is the M1/M2 default: an
+     * unset wire field means the same thing, so old producers against a new
+     * broker (and vice versa) keep identical semantics.
+     */
+    private volatile MqProto.AckMode acks = MqProto.AckMode.ACKS_1;
 
     private final Object lock = new Object();
     private final ArrayDeque<PendingSend> buffer = new ArrayDeque<PendingSend>();
@@ -52,7 +58,7 @@ public final class MQProducer implements Closeable {
     private long seqCounter;
 
     public MQProducer(Transport transport, int batchSizeBytes, long lingerMs,
-                      int maxRetries, long retryBackoffMs) {
+            int maxRetries, long retryBackoffMs) {
         this.transport = transport;
         this.batchSizeBytes = batchSizeBytes;
         this.lingerMs = lingerMs;
@@ -69,10 +75,27 @@ public final class MQProducer implements Closeable {
     }
 
     public static MQProducer connect(String host, int port, long requestTimeoutMs,
-                                     int batchSizeBytes, long lingerMs)
+            int batchSizeBytes, long lingerMs)
             throws InterruptedException {
         return new MQProducer(ClientChannel.connect(host, port, requestTimeoutMs),
                 batchSizeBytes, lingerMs, 5, 100L);
+    }
+
+    /**
+     * Cluster flavor (M3): the transport follows NOT_LEADER redirects and
+     * bootstrap fallbacks on its own, so the producer's own retry logic only
+     * sees genuine failures (RETRY_LATER, exhausted redirect budgets).
+     */
+    public static MQProducer connectCluster(java.util.List<java.net.InetSocketAddress> nodes,
+            long requestTimeoutMs, int batchSizeBytes, long lingerMs) {
+        return new MQProducer(FailoverTransport.open(nodes, requestTimeoutMs),
+                batchSizeBytes, lingerMs, 5, 100L);
+    }
+
+    /** Sets the durability span for subsequent sends (fluent). */
+    public MQProducer acks(MqProto.AckMode acks) {
+        this.acks = acks;
+        return this;
     }
 
     /**
@@ -143,7 +166,8 @@ public final class MQProducer implements Closeable {
     }
 
     private void sendBatch(final Batch batch) {
-        MqProto.ProduceRequest.Builder req = MqProto.ProduceRequest.newBuilder();
+        MqProto.ProduceRequest.Builder req = MqProto.ProduceRequest.newBuilder()
+                .setAcks(acks);
         long now = System.currentTimeMillis();
         for (PendingSend ps : batch.sends) {
             req.addMessages(MqProto.MessageData.newBuilder()

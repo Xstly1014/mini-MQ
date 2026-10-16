@@ -54,6 +54,13 @@ public class BrokerServer {
     private CommitLog commitLog;
     private ConsumeQueueStore consumeQueueStore;
     private FlushService flushService;
+    /**
+     * The cluster assembly, or null on a standalone broker (M1/M2 behavior:
+     * the leader gate is always open, the "HW" is the local log end). Setup
+     * order matters: it opens RaftState/EpochCheckpoint under the store root
+     * and needs both storage handles alive.
+     */
+    private ReplicationService replication;
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
     private ThreadPoolExecutor businessPool;
@@ -75,9 +82,14 @@ public class BrokerServer {
             // root, e.g. data/commitlog + data/consumequeue). The dispatcher
             // replays/rebuilds the index tail at open; FETCH goes through it.
             consumeQueueStore = ConsumeQueueStore.open(consumeQueueRoot(config), commitLog);
+            if (config.isClustered()) {
+                replication = new ReplicationService(config, commitLog, consumeQueueStore);
+            }
             BrokerRequestHandler handler = createRequestHandler(commitLog, consumeQueueStore);
             businessPool = createBusinessPool(config);
-            DispatcherHandler dispatcher = new DispatcherHandler(businessPool, handler);
+            // Cluster frames (VOTE/HEARTBEAT/FOLLOWER_FETCH...) split off at
+            // the EventLoop without parsing; null keeps the standalone path.
+            DispatcherHandler dispatcher = new DispatcherHandler(businessPool, handler, replication);
             // SYNC/ASYNC tiers need the group-commit flush thread; OS_FLUSH
             // (M1 behavior) skips it entirely.
             if (config.getFlushMode() != FlushMode.OS_FLUSH) {
@@ -109,6 +121,11 @@ public class BrokerServer {
                         }
                     });
             serverChannel = bootstrap.bind(config.getPort()).sync().channel();
+            // Election starts only once the port listens: peers answering
+            // our votes must be able to reach us.
+            if (replication != null) {
+                replication.start();
+            }
             started = true;
 
             shutdownHook = new Thread(new Runnable() {
@@ -183,21 +200,28 @@ public class BrokerServer {
                 }
                 // 1. stop accepting new connections and requests
                 serverChannel.close().syncUninterruptibly();
-                // 2. drain in-flight business work (workers alive: responses flow)
+                // 2. stop the cluster (election, sync, ISR sweep) — this also
+                //    wakes any acks=all producer parked on the HW, so the
+                //    business pool below can actually drain
+                if (replication != null) {
+                    replication.close();
+                    replication = null;
+                }
+                // 3. drain in-flight business work (workers alive: responses flow)
                 businessPool.shutdown();
                 if (!businessPool.awaitTermination(10, TimeUnit.SECONDS)) {
                     businessPool.shutdownNow();
                 }
-                // 3. stop IO threads
+                // 4. stop IO threads
                 bossGroup.shutdownGracefully(0, 2, TimeUnit.SECONDS).syncUninterruptibly();
                 workerGroup.shutdownGracefully(0, 2, TimeUnit.SECONDS).syncUninterruptibly();
-                // 4. final force (covers everything appended, wakes any SYNC
+                // 5. final force (covers everything appended, wakes any SYNC
                 //    waiter still parked) then flush and close storage
                 if (flushService != null) {
                     flushService.close();
                     flushService = null;
                 }
-                // 5. stop the index dispatcher (it reads the log; must not
+                // 6. stop the index dispatcher (it reads the log; must not
                 //    outlive it), force the queues it filled
                 if (consumeQueueStore != null) {
                     consumeQueueStore.close();
@@ -221,13 +245,18 @@ public class BrokerServer {
 
     /**
      * Request handler factory; tests override this to inject slow/failing
-     * handlers for backpressure and failure-path integration tests.
+     * handlers for backpressure and failure-path integration tests. The
+     * replication gate is the cluster's leader/HW/acks-all authority on a
+     * clustered broker, and the always-open standalone twin otherwise.
      */
     protected BrokerRequestHandler createRequestHandler(CommitLog commitLog,
             ConsumeQueueStore consumeQueues) {
+        ReplicationGate gate = replication != null
+                ? replication
+                : ReplicationGate.standalone(commitLog);
         return new BrokerRequestHandler(commitLog, consumeQueues,
                 config.getFlushMode(), config.getFlushAwaitTimeoutMs(),
-                config.isZeroCopyFetch());
+                config.isZeroCopyFetch(), gate, config.getReplicationAwaitTimeoutMs());
     }
 
     /**

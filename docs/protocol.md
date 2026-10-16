@@ -3,6 +3,8 @@
 > M1 任务 1 交付物。本文件是协议的唯一权威契约：帧格式、类型表、字节序、错误码在此定稿。
 > 实现：`protocol` 模块（`Frame` / `FrameEncoder` / `FrameDecoder` / `MessageType`），BODY 结构见 `protocol/src/main/proto/mq.proto`。
 > 协议帧格式一旦发布即冻结（改协议的代价随里程碑递增——M3 fetch 同步、心跳、选举投票全部复用本帧）。
+>
+> **v1.3（M3）**：新增节点间类型 0x08~0x0B（VOTE / VOTE_RESP / HEARTBEAT_RESP / FOLLOWER_FETCH，HEARTBEAT 0x07 自 M3 起启用）；FetchRequest 增副本字段、FetchResponse 增 epoch/错误通道、ProduceRequest 增 acks、ProduceAck 增错误码与 leader_hint。全部为追加/加字段，v1 帧布局不变、旧客户端语义不变。
 
 ## 1. 帧格式
 
@@ -28,15 +30,23 @@
 
 | TYPE 值 | 类型 | 方向 | BODY（protobuf） | 说明 |
 |---------|------|------|------------------|------|
-| 0x01 | PRODUCE | client→broker | ProduceRequest | 批量发送（聚合后的消息批） |
-| 0x02 | PRODUCE_ACK | broker→client | ProduceAck | 逐条 offset + 状态码 |
+| 0x01 | PRODUCE | client→broker | ProduceRequest | 批量发送（聚合后的消息批）；v1.3 增 acks（默认 ACKS_1 = M1/M2 语义） |
+| 0x02 | PRODUCE_ACK | broker→client | ProduceAck | 逐条 offset + 状态码；v1.3 增 error_code / leader_hint |
 | 0x03 | FETCH | client→broker | FetchRequest | pull 拉取：topic + 起始全局 offset + maxCount |
-| 0x04 | FETCH_RESP | broker→client | FetchResponse | 记录集 + next_offset + high_watermark |
+| 0x04 | FETCH_RESP | broker→client | FetchResponse | 记录集 + next_offset + high_watermark；v1.3 增 leader_epoch / epoch_start_offset / error_code / error_value / leader_hint |
 | 0x05 | COMMIT_OFFSET | client→broker | CommitOffsetRequest | v1 已定义、broker 侧存储 M3 启用（v1 位移在消费端本地持久化） |
 | 0x06 | COMMIT_OFFSET_ACK | broker→client | CommitOffsetAck | 同上预留 |
-| 0x07 | HEARTBEAT | 任意 | （M3 定义） | 租约心跳，M3 副本/选举使用 |
+| 0x07 | HEARTBEAT | leader→follower | HeartbeatRequest | 权威租约心跳（M3）：follower 收到即重置选举计时器并回 HEARTBEAT_RESP |
+| 0x08 | VOTE | candidate→peer | VoteRequest | Raft 拉票；`pre_vote=true` 为 PreVote 探测（不带 term 副作用） |
+| 0x09 | VOTE_RESP | peer→candidate | VoteResponse | term + granted；响应方 term 更大时请求方立即退位 |
+| 0x0A | HEARTBEAT_RESP | follower→leader | HeartbeatResponse | term；leader 见更大 term 立即退位（脑裂第一次接触即终结） |
+| 0x0B | FOLLOWER_FETCH | follower→leader | FetchRequest | 副本同步拉取（Kafka：follower 是"特殊消费者"，BODY 同 FETCH，带 follower_id/follower_epoch）；响应复用 0x04 FETCH_RESP |
 
 **新增类型只追加，不复用、不改语义。**
+
+### 0x0B 为什么独立 TYPE 而不是复用 0x03
+
+Broker 侧路由要求不解包 BODY 即可分流：消费者 FETCH 走业务池（可阻塞），FOLLOWER_FETCH 直达单线程 replication 状态机（ISR/LEO 记账必须与选举/心跳同一串行域，否则出现并发状态竞争——Raft 实现第一大坑）。BODY 复用同一 protobuf，编解码零分叉。
 
 ## 3. 字节序约定（两层各定各的，绝不混用）
 
@@ -75,14 +85,27 @@
 | 1 | RETRY_LATER | broker 业务池饱和（背压） | SDK 自动重发：scheduler 线性退避（不阻塞回调线程），超过 maxRetries 后回调失败 |
 | 2 | ERROR | 服务端错误 | complete 异常 |
 
+### 5.1 应用级 ErrorCode（v1.3 / M3，PRODUCE_ACK 与 FETCH_RESP 共用）
+
+| 值 | 码 | 语义 | 触发方 | 客户端/节点动作 |
+|----|----|------|--------|----------------|
+| 0 | NONE | 正常 | — | — |
+| 1 | NOT_LEADER | 收请求的节点不是 Leader（或已不是） | 非 Leader 节点对 PRODUCE / FETCH | 按 leader_hint 直连新 Leader 重发；hint 为空则回 bootstrap 列表轮询（双路径） |
+| 2 | STALE_EPOCH | 请求携带的 Leader epoch 过期 | Leader 对过期 epoch 的节点间请求 | 旧 Leader 侧识别自己已被取代，转 Follower |
+| 3 | ISR_TOO_SMALL | acks=all 时 ISR 已收缩到 min.insync.replicas 以下 | Leader 对 PRODUCE(acks=all) | 拒绝写入（宁可拒绝，绝不静默降级）；生产者按错误上报 |
+| 4 | TRUNCATE_TO | 请求方日志与 Leader 分叉，需回截 | Leader 对 FOLLOWER_FETCH | error_value = 截断点；Follower 截断本地日志后从该点重新拉取 |
+
 ## 6. BODY 契约（protobuf）
 
 完整定义见 `protocol/src/main/proto/mq.proto`（proto 文件即接口契约，字段演进遵循 protobuf 前后兼容规则）。要点：
 
 - **ProduceRequest.messages**：批量聚合体，一次 RTT 摊薄 N 条消息
+- **ProduceRequest.acks**（v1.3）：ACKS_1（默认，M1/M2 语义）/ ACKS_0 / ACKS_ALL（等 ISR 全员确认，HW 越过批尾才 ack）
 - **ProduceAck.offsets**：与请求 messages **同序**一一对应，-1 表示该条未落盘
 - **FetchResponse.next_offset**：全局扫描位置（含被 topic 过滤跳过的记录）——消费端把它作为位移持久化，重启后从此续读
-- **FetchResponse.high_watermark**：M3 副本高水位；v1 = broker maxOffset，字段链路先行打通
+- **FetchResponse.high_watermark**：副本高水位（M3 落地）= ISR 内全部副本 LEO 的最小值；消费者只能读到 HW 之前的记录——"落后副本的消息对消费者不可见"
+- **FetchRequest.follower_id / follower_epoch**（v1.3，仅 FOLLOWER_FETCH）：副本身份 + 上次同步的 Leader epoch，epoch 仲裁的依据
+- **FetchResponse.leader_epoch / epoch_start_offset**（v1.3）：Follower 采纳新 epoch 并记录边界的依据
 - **MessageData.seq_key**：幂等键，hash 后写入存储 KEYHASH 字段；broker 去重窗口 M4 落地，v1 先打通字段链路
 
 ## 7. 版本演进规则

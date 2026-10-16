@@ -54,6 +54,14 @@ import io.netty.channel.FileRegion;
  * The handler is a pure request -> response function; writing the response
  * back is the dispatcher's job, which keeps this class testable without
  * Netty. null means "no response": the client's request timeout retries.
+ *
+ * <p>
+ * Cluster gates (M3): every data-plane request passes the
+ * {@link ReplicationGate} — non-leaders answer NOT_LEADER with a
+ * {@code leader_hint} (the FailoverTransport's redirect signal), and
+ * consumers only ever see records strictly below the replication high
+ * watermark. A standalone broker's gate is always open with HW == log end:
+ * the M1/M2 behavior, unchanged.
  */
 public class BrokerRequestHandler {
 
@@ -73,14 +81,26 @@ public class BrokerRequestHandler {
     private final FlushMode flushMode;
     private final long flushAwaitTimeoutMs;
     private final boolean zeroCopyFetch;
+    private final ReplicationGate gate;
+    /** acks=all park timeout (see gate.awaitReplicated). */
+    private final long replicationAwaitTimeoutMs;
 
     public BrokerRequestHandler(CommitLog commitLog, ConsumeQueueStore consumeQueues,
             FlushMode flushMode, long flushAwaitTimeoutMs, boolean zeroCopyFetch) {
+        this(commitLog, consumeQueues, flushMode, flushAwaitTimeoutMs, zeroCopyFetch,
+                ReplicationGate.standalone(commitLog), 5_000L);
+    }
+
+    public BrokerRequestHandler(CommitLog commitLog, ConsumeQueueStore consumeQueues,
+            FlushMode flushMode, long flushAwaitTimeoutMs, boolean zeroCopyFetch,
+            ReplicationGate gate, long replicationAwaitTimeoutMs) {
         this.commitLog = commitLog;
         this.consumeQueues = consumeQueues;
         this.flushMode = flushMode;
         this.flushAwaitTimeoutMs = flushAwaitTimeoutMs;
         this.zeroCopyFetch = zeroCopyFetch;
+        this.gate = gate;
+        this.replicationAwaitTimeoutMs = replicationAwaitTimeoutMs;
     }
 
     /** Processes one request frame; null = no response. */
@@ -172,6 +192,42 @@ public class BrokerRequestHandler {
         MqProto.ProduceAck ack;
         try {
             MqProto.ProduceRequest req = MqProto.ProduceRequest.parseFrom(request.body());
+
+            // LeaderGate: a non-leader never appends — that write would be
+            // invisible to the cluster (below nobody's HW) and torn out by
+            // the next arbitration. Redirect instead.
+            if (!gate.isLeader()) {
+                MqProto.ProduceAck.Builder redirect = MqProto.ProduceAck.newBuilder()
+                        .setStatus(MqProto.ProduceStatus.ERROR)
+                        .setError("not the leader")
+                        .setErrorCode(MqProto.ErrorCode.NOT_LEADER);
+                for (int i = 0; i < req.getMessagesCount(); i++) {
+                    redirect.addOffsets(-1L);
+                }
+                String hint = gate.leaderHint();
+                if (hint != null) {
+                    redirect.setLeaderHint(hint);
+                }
+                return new Frame(MessageType.PRODUCE_ACK, request.requestId(),
+                        redirect.build().toByteArray());
+            }
+
+            // acks=all admission BEFORE appending: with the ISR below
+            // min.insync.replicas the write is REFUSED (ISR_TOO_SMALL),
+            // never silently degraded to fewer copies than promised.
+            if (req.getAcks() == MqProto.AckMode.ACKS_ALL && req.getMessagesCount() > 0
+                    && !gate.acksAllAdmissible()) {
+                MqProto.ProduceAck.Builder small = MqProto.ProduceAck.newBuilder()
+                        .setStatus(MqProto.ProduceStatus.ERROR)
+                        .setError("ISR below min.insync.replicas")
+                        .setErrorCode(MqProto.ErrorCode.ISR_TOO_SMALL);
+                for (int i = 0; i < req.getMessagesCount(); i++) {
+                    small.addOffsets(-1L);
+                }
+                return new Frame(MessageType.PRODUCE_ACK, request.requestId(),
+                        small.build().toByteArray());
+            }
+
             MqProto.ProduceAck.Builder builder = MqProto.ProduceAck.newBuilder()
                     .setStatus(MqProto.ProduceStatus.OK);
             long now = System.currentTimeMillis();
@@ -183,10 +239,23 @@ public class BrokerRequestHandler {
                         data.getPayload().toByteArray());
                 builder.addOffsets(commitLog.append(msg));
             }
+            // The leader's own LEO moved: its number in the HW minimum must
+            // move with it, or acks=all waits park against a stale HW.
+            if (req.getMessagesCount() > 0) {
+                gate.onLocalAppend();
+            }
+
+            // ACKS_0: never waits for anything — return the offsets
+            // (informational only; the status is the contract).
+            if (req.getAcks() == MqProto.AckMode.ACKS_0 || req.getMessagesCount() == 0) {
+                ack = builder.build();
+                return new Frame(MessageType.PRODUCE_ACK, request.requestId(), ack.toByteArray());
+            }
+
             // SYNC_FLUSH gate: the batch is durable only when the flush
             // thread's frontier passes it. Parking here is the group-commit
             // aggregation (Follower waits for the Leader's force).
-            if (flushMode == FlushMode.SYNC_FLUSH && req.getMessagesCount() > 0
+            if (flushMode == FlushMode.SYNC_FLUSH
                     && !commitLog.awaitDurable(commitLog.maxOffset(), flushAwaitTimeoutMs)) {
                 // Timeout: the records ARE appended (a resend will duplicate —
                 // at-least-once, dedup arrives in M4), but this ack must not
@@ -194,6 +263,18 @@ public class BrokerRequestHandler {
                 ack = MqProto.ProduceAck.newBuilder()
                         .setStatus(MqProto.ProduceStatus.ERROR)
                         .setError("flush await timeout")
+                        .build();
+                return new Frame(MessageType.PRODUCE_ACK, request.requestId(), ack.toByteArray());
+            }
+
+            // acks=all gate: the batch is replicated only when the HW passes
+            // it. The park is the replication twin of the flush park above —
+            // same aggregation shape, one more durability axis.
+            if (req.getAcks() == MqProto.AckMode.ACKS_ALL
+                    && !gate.awaitReplicated(commitLog.maxOffset(), replicationAwaitTimeoutMs)) {
+                ack = MqProto.ProduceAck.newBuilder()
+                        .setStatus(MqProto.ProduceStatus.ERROR)
+                        .setError("replication await timeout")
                         .build();
                 return new Frame(MessageType.PRODUCE_ACK, request.requestId(), ack.toByteArray());
             }
@@ -222,9 +303,35 @@ public class BrokerRequestHandler {
             return null;
         }
         try {
+            // LeaderGate for reads too: a non-leader's HW is meaningless and
+            // its log may be an arbitration target. Redirect with the hint;
+            // an unknown leader echoes the request offset so the client's
+            // re-bootstrap logic decides the next hop.
+            if (!gate.isLeader()) {
+                MqProto.FetchResponse.Builder redirect = MqProto.FetchResponse.newBuilder()
+                        .setNextOffset(req.getOffset())
+                        .setErrorCode(MqProto.ErrorCode.NOT_LEADER);
+                String hint = gate.leaderHint();
+                if (hint != null) {
+                    redirect.setLeaderHint(hint);
+                }
+                return prefixedFrame(MessageType.FETCH_RESP, request.requestId(), redirect.build());
+            }
+
             int maxCount = Math.max(1, req.getMaxCount());
             List<ConsumeQueue.Entry> entries =
                     consumeQueues.readFrom(req.getTopic(), req.getOffset(), maxCount);
+
+            // HW visibility: a record counts as "there" only once the whole
+            // cluster promised it — strictly below the watermark. Entries
+            // ascend, so one cut from the tail suffices; a fully-shadowed
+            // batch returns nothing and the caller's next_offset stays put.
+            long hw = gate.highWatermark();
+            int keep = 0;
+            while (keep < entries.size() && entries.get(keep).end() <= hw) {
+                keep++;
+            }
+            entries = entries.subList(0, keep);
 
             if (zeroCopyFetch && !entries.isEmpty()) {
                 ZeroCopyFrame zc = zeroCopyFetchResponse(request, req, entries);
@@ -273,7 +380,7 @@ public class BrokerRequestHandler {
         MqProto.FetchResponse.Builder meta = MqProto.FetchResponse.newBuilder()
                 .setZeroCopy(true)
                 .setNextOffset(rawEnd)
-                .setHighWatermark(commitLog.maxOffset());
+                .setHighWatermark(gate.highWatermark());
         for (ConsumeQueue.Entry e : kept) {
             MessageCodec.HeaderResult h = commitLog.decodeHeaderAt(e.offset);
             if (h.status != MessageCodec.DecodeStatus.OK || h.size != e.size) {
@@ -360,8 +467,8 @@ public class BrokerRequestHandler {
             nextOffset = e.end();
         }
         resp.setNextOffset(nextOffset);
-        // Equals the log end until M3 replication introduces a real HW.
-        resp.setHighWatermark(commitLog.maxOffset());
+        // The replication HW on a cluster; the log end on a standalone broker.
+        resp.setHighWatermark(gate.highWatermark());
         return prefixedFrame(MessageType.FETCH_RESP, request.requestId(), resp.build());
     }
 

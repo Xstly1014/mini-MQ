@@ -213,4 +213,84 @@ class ConsumeQueueStoreTest {
             log.close();
         }
     }
+
+    /**
+     * The live replication truncation (M3): the stale-leader scenario played
+     * out through the store. Old lineage is indexed; a dirty tail is written
+     * (and indexed!) while the node is partitioned; the leader's epoch
+     * checkpoint then rewinds log+index to {@code cut}; the current lineage
+     * is replicated in; the dispatcher replays forward from the laggard.
+     * End state: every queue is exactly the new history — no orphaned entry
+     * pokes past the cut, no gap, no duplicate.
+     */
+    @Test
+    void truncateLogAndIndexRewindsAndReplaysTheNewLineage() throws Exception {
+        CommitLog log = CommitLog.open(logDir(), SEGMENT_SIZE);
+        ConsumeQueueStore store = ConsumeQueueStore.open(cqDir(), log);
+        try {
+            // old lineage: a/b/c interleaved, 10 messages each
+            for (int i = 0; i < 30; i++) {
+                log.append(msg(i % 3 == 0 ? "a" : (i % 3 == 1 ? "b" : "c"), i));
+            }
+            assertTrue(store.awaitDispatchedTo(log.maxOffset(), 5_000));
+            assertEquals(10, store.readFrom("a", 0, 1000).size());
+
+            // pick a mid-stream record boundary: the start of a's 6th entry
+            // (i == 15 overall). Messages strictly below it: i = 0..14 →
+            // 5 per topic.
+            long cut = store.readFrom("a", 0, 1000).get(5).offset;
+
+            // dirty tail: the partitioned node keeps producing (and the
+            // dispatcher keeps indexing it)
+            appendAll(log, "a", 100);
+            appendAll(log, "b", 101);
+            appendAll(log, "c", 102);
+            assertTrue(store.awaitDispatchedTo(log.maxOffset(), 5_000));
+            assertEquals(110, store.readFrom("a", 0, 1000).size(), "dirty tail is indexed too");
+
+            // epoch arbitration: rewind log + index + cursors in one shot
+            store.truncateLogAndIndex(cut);
+            assertEquals(cut, log.maxOffset(), "log rewound to the cut");
+            assertTrue(store.dispatchedOffset() <= cut, "cursor rewound below the cut");
+            for (String topic : new String[] { "a", "b", "c" }) {
+                List<ConsumeQueue.Entry> es = store.readFrom(topic, 0, 1000);
+                assertEquals(5, es.size(), "queue " + topic + " back to pre-cut state");
+                for (ConsumeQueue.Entry e : es) {
+                    assertTrue(e.end() <= cut, "no entry may poke past the cut");
+                }
+            }
+
+            // the current lineage arrives via replication: log-only appends
+            // (raw, same as appendReplicated semantics) + async re-index
+            for (int i = 0; i < 12; i++) {
+                log.append(msg(i % 2 == 0 ? "a" : "b", 200 + i));
+            }
+            assertTrue(store.awaitDispatchedTo(log.maxOffset(), 10_000));
+
+            // final state: exactly 5+6 / 5+6 / 5 entries, each backed by a
+            // readable record of the right topic — index and log reconciled
+            assertQueueBackedByLog(log, store, "a", 11);
+            assertQueueBackedByLog(log, store, "b", 11);
+            assertQueueBackedByLog(log, store, "c", 5);
+        } finally {
+            store.close();
+            log.close();
+        }
+    }
+
+    /** Every entry locates a full record of {@code topic}; counts must match. */
+    private static void assertQueueBackedByLog(CommitLog log, ConsumeQueueStore store,
+            String topic, int expectedEntries) throws IOException {
+        List<ConsumeQueue.Entry> entries = store.readFrom(topic, 0, 100_000);
+        assertEquals(expectedEntries, entries.size(), "queue " + topic + " size");
+        long prevEnd = -1;
+        for (ConsumeQueue.Entry e : entries) {
+            assertTrue(e.offset >= prevEnd, topic + " entries must ascend");
+            prevEnd = e.end();
+            List<Message> recs = log.readFrom(e.offset, 1);
+            assertEquals(1, recs.size(), "entry at " + e.offset + " must be backed by a record");
+            assertEquals(topic, recs.get(0).getTopic(), "entry at " + e.offset + " backs wrong topic");
+            assertEquals(e.size, MessageCodec.sizeOf(recs.get(0)), "entry size must match the record");
+        }
+    }
 }

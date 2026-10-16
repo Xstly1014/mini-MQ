@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.minimq</groupId>
+    <artifactId>mini-mq</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>mini-mq-replica</artifactId>
+  <name>mini-mq-replica</name>
+  <description>Replication and election kernel: Raft state (term/votedFor persistence),
+    leader-epoch checkpoint arbitration, follower sync, ISR/HW management.</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.minimq</groupId>
+      <artifactId>mini-mq-storage</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.minimq</groupId>
+      <artifactId>mini-mq-protocol</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+    </dependency>
+  </dependencies>
+</project>

@@ -14,7 +14,14 @@ final class TestFrames {
     }
 
     static Frame produce(long requestId, String topic, String... payloads) {
-        MqProto.ProduceRequest.Builder b = MqProto.ProduceRequest.newBuilder();
+        return produce(requestId, topic, MqProto.AckMode.ACKS_1, payloads);
+    }
+
+    /** M3: same shape, explicit durability span (acks=0/1/all). */
+    static Frame produce(long requestId, String topic, MqProto.AckMode acks,
+            String... payloads) {
+        MqProto.ProduceRequest.Builder b = MqProto.ProduceRequest.newBuilder()
+                .setAcks(acks);
         for (String p : payloads) {
             b.addMessages(MqProto.MessageData.newBuilder()
                     .setTopic(topic)

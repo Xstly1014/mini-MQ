@@ -74,6 +74,20 @@ public final class MQConsumer implements Closeable {
     }
 
     /**
+     * Cluster flavor (M3): a {@link FailoverTransport} underneath, so a
+     * leader change shows up here only as a briefly slow poll — the
+     * transport chases the hint (or re-bootstraps) and re-issues the FETCH.
+     */
+    public static MQConsumer subscribeCluster(java.util.List<java.net.InetSocketAddress> nodes,
+            String topic, String group, File offsetsDir, int fetchMaxCount,
+            long requestTimeoutMs) {
+        OffsetStore store = OffsetStore.load(
+                new File(offsetsDir, "consumer-offsets-" + group + ".properties"));
+        return new MQConsumer(FailoverTransport.open(nodes, requestTimeoutMs),
+                topic, store, fetchMaxCount, requestTimeoutMs);
+    }
+
+    /**
      * One FETCH round. Returns the (possibly empty) records; an empty result
      * means "caught up for now" — the caller decides whether to retry.
      */
