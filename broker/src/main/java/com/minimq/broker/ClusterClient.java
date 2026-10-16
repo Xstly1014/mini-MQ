@@ -55,10 +55,22 @@ final class ClusterClient {
 
     private static final Logger LOG = Logger.getLogger(ClusterClient.class.getName());
 
-    /** Inbound routing: raft frames go to the election, fetch answers to their waiter. */
+    /**
+     * Inbound routing: election frames go to the election, fetch answers to
+     * their waiter, and FOLLOWER_FETCH to the replication service WITH the
+     * channel it arrived on (the response must go back the way it came).
+     */
     interface Router {
-        /** VOTE / VOTE_RESP / HEARTBEAT / HEARTBEAT_RESP arriving over a client-side connection. */
-        void onRaftFrame(Frame frame);
+        /**
+         * A cluster frame arriving on a client-side connection. Covers
+         * VOTE/VOTE_RESP/HEARTBEAT/HEARTBEAT_RESP and — crucially —
+         * FOLLOWER_FETCH: on Windows a bidirectional connect pair can be
+         * merged by TCP simultaneous open into ONE connection whose both
+         * ends are ClusterClient pipelines, so a follower's fetch may arrive
+         * here instead of on the server port. Routing it (rather than
+         * dropping it) makes both topologies work.
+         */
+        void onFrame(Channel channel, Frame frame);
     }
 
     private final int selfId;
@@ -67,8 +79,7 @@ final class ClusterClient {
     private final NioEventLoopGroup group;
     private final Bootstrap bootstrap;
     private final ConcurrentMap<Integer, Channel> channels = new ConcurrentHashMap<Integer, Channel>();
-    private final ConcurrentMap<Long, CompletableFuture<MqProto.FetchResponse>> pendingFetches =
-            new ConcurrentHashMap<Long, CompletableFuture<MqProto.FetchResponse>>();
+    private final ConcurrentMap<Long, CompletableFuture<MqProto.FetchResponse>> pendingFetches = new ConcurrentHashMap<Long, CompletableFuture<MqProto.FetchResponse>>();
     private final AtomicLong requestIds = new AtomicLong(1);
     private volatile boolean closed;
 
@@ -215,7 +226,10 @@ final class ClusterClient {
         }
     }
 
-    /** Routes peer frames: election messages onward, fetch answers to waiters. */
+    /**
+     * Routes peer frames: election messages and fetches onward, fetch answers to
+     * waiters.
+     */
     private final class PeerHandler extends SimpleChannelInboundHandler<Frame> {
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, Frame frame) {
@@ -224,7 +238,13 @@ final class ClusterClient {
                 case VOTE_RESP:
                 case HEARTBEAT:
                 case HEARTBEAT_RESP:
-                    router.onRaftFrame(frame);
+                case FOLLOWER_FETCH:
+                    // FOLLOWER_FETCH included: see Router#onFrame — on a
+                    // simultaneous-open connection this handler is the
+                    // "server" for the follower's fetch, and the reply must
+                    // ride this very channel (requestId pairing still works:
+                    // the follower's PeerHandler completes FETCH_RESPs).
+                    router.onFrame(ctx.channel(), frame);
                     break;
                 case FETCH_RESP:
                     // ours by construction: consumer FETCH_RESP never arrives

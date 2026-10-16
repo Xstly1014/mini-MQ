@@ -30,13 +30,13 @@ import io.netty.util.concurrent.EventExecutor;
  * Netty server with the three-tier threading model (M1 task 2):
  *
  * <ul>
- *   <li>BossGroup — 1 thread, accept only (a once-per-connection microsecond
- *   operation; more threads would be waste),</li>
- *   <li>WorkerGroup — CPU x 2 threads, read/write + frame codec; each channel
- *   is bound to one EventLoop for its lifetime, so per-connection events are
- *   serial and lock-free,</li>
- *   <li>Business pool — bounded queue, AbortPolicy; saturation becomes
- *   RETRY_LATER instead of ever blocking an EventLoop.</li>
+ * <li>BossGroup — 1 thread, accept only (a once-per-connection microsecond
+ * operation; more threads would be waste),</li>
+ * <li>WorkerGroup — CPU x 2 threads, read/write + frame codec; each channel
+ * is bound to one EventLoop for its lifetime, so per-connection events are
+ * serial and lock-free,</li>
+ * <li>Business pool — bounded queue, AbortPolicy; saturation becomes
+ * RETRY_LATER instead of ever blocking an EventLoop.</li>
  * </ul>
  *
  * Graceful shutdown order: stop accepting (close the listener) -> drain the
@@ -182,6 +182,14 @@ public class BrokerServer {
         return flushService;
     }
 
+    /**
+     * The cluster assembly, or null on a standalone broker (monitoring /
+     * integration tests: role, term, ISR snapshot).
+     */
+    public ReplicationService replication() {
+        return replication;
+    }
+
     /** Idempotent; safe to call from a shutdown hook or directly. */
     public void shutdown() {
         synchronized (lifecycleLock) {
@@ -201,8 +209,8 @@ public class BrokerServer {
                 // 1. stop accepting new connections and requests
                 serverChannel.close().syncUninterruptibly();
                 // 2. stop the cluster (election, sync, ISR sweep) — this also
-                //    wakes any acks=all producer parked on the HW, so the
-                //    business pool below can actually drain
+                // wakes any acks=all producer parked on the HW, so the
+                // business pool below can actually drain
                 if (replication != null) {
                     replication.close();
                     replication = null;
@@ -216,13 +224,13 @@ public class BrokerServer {
                 bossGroup.shutdownGracefully(0, 2, TimeUnit.SECONDS).syncUninterruptibly();
                 workerGroup.shutdownGracefully(0, 2, TimeUnit.SECONDS).syncUninterruptibly();
                 // 5. final force (covers everything appended, wakes any SYNC
-                //    waiter still parked) then flush and close storage
+                // waiter still parked) then flush and close storage
                 if (flushService != null) {
                     flushService.close();
                     flushService = null;
                 }
                 // 6. stop the index dispatcher (it reads the log; must not
-                //    outlive it), force the queues it filled
+                // outlive it), force the queues it filled
                 if (consumeQueueStore != null) {
                     consumeQueueStore.close();
                     consumeQueueStore = null;

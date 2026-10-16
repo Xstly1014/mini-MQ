@@ -122,6 +122,15 @@ public final class RaftNode {
     private long heartbeatDeadlineNanos;
     private final Set<Integer> probeVoters = new HashSet<Integer>();
     private final Set<Integer> voters = new HashSet<Integer>();
+    /**
+     * In-memory mirror of this term's vote (etcd's r.Vote): PRE_CANDIDATE
+     * resets it, real votes set it, the durable state never hears about
+     * probes. Without the reset, two followers whose leader died would
+     * refuse each other's probes forever — both still holding the departed
+     * leader's term-1 vote — and no election would ever converge (the
+     * observed kill-leader deadlock).
+     */
+    private int memVoteFor = -1;
 
     // ---- published for monitoring/tests ----
     private volatile boolean running;
@@ -148,6 +157,7 @@ public final class RaftNode {
             }
         }, "mini-mq-raft-" + selfId);
         this.visibleTerm = b.state.currentTerm();
+        this.memVoteFor = b.state.votedFor(); // restart: last durable vote still counts
     }
 
     // ------------------------------------------------------------------
@@ -279,6 +289,12 @@ public final class RaftNode {
     private void beginElection() {
         if (preVoteEnabled) {
             role = Role.PRE_CANDIDATE;
+            // etcd's becomePreCandidate resets r.Vote: timing out IS the
+            // admission that this term has no leader I recognize, so my old
+            // vote stops vetoing other leaderless nodes' probes. The durable
+            // vote is untouched — a probe must never have persistence
+            // side effects.
+            memVoteFor = -1;
             probeVoters.clear();
             probeVoters.add(selfId);
             resetElectionDeadline();
@@ -307,6 +323,7 @@ public final class RaftNode {
             resetElectionDeadline();
             return; // no durable vote, no campaign — try again next timeout
         }
+        memVoteFor = selfId;
         visibleTerm = state.currentTerm();
         role = Role.CANDIDATE;
         voters.clear();
@@ -373,10 +390,11 @@ public final class RaftNode {
                 .setTerm(state.currentTerm())
                 .setResponderId(selfId);
         if (request.getPreVote()) {
-            // Term-less probe: no persistence, no state change. A node that
-            // has spent this term's vote (i.e. recognized a live term) says
-            // no — this is what keeps a healed isolate from campaigning.
-            boolean canVote = state.votedFor() == -1 || state.votedFor() == request.getCandidateId();
+            // Term-less probe: no persistence, no state change. The in-memory
+            // vote (reset when I myself timed out) is the whole isolation
+            // defense — a node that voted this term, or that still hears a
+            // leader, refuses; two leaderless nodes grant each other.
+            boolean canVote = memVoteFor == -1 || memVoteFor == request.getCandidateId();
             resp.setGranted(request.getTerm() > state.currentTerm() && canVote && logOk);
         } else {
             boolean granted = false;
@@ -384,6 +402,9 @@ public final class RaftNode {
                 granted = logOk && state.tryVote(request.getTerm(), request.getCandidateId());
             } catch (IOException e) {
                 LOG.log(Level.WARNING, "raft-" + selfId + " vote persistence failed", e);
+            }
+            if (granted) {
+                memVoteFor = request.getCandidateId();
             }
             resp.setGranted(granted);
         }
@@ -465,6 +486,7 @@ public final class RaftNode {
         } catch (IOException e) {
             LOG.log(Level.WARNING, "raft-" + selfId + " cannot persist adopted term " + term, e);
         }
+        memVoteFor = state.votedFor(); // observeTerm reset it to -1 on adoption
         visibleTerm = state.currentTerm();
         becomeFollower();
         // A fresher term deserves a fresh lease: without this reset the node

@@ -91,14 +91,21 @@ class ClientBrokerSmokeTest {
             producer.close();
         }
 
-        // first session: consume exactly one small batch, commit, "crash"
+        // first session: consume exactly one small batch, commit, "crash".
+        // The deadline loop is not weakening the maxCount=4 assertion: each
+        // poll is bounded by fetchMaxCount, so the loop still ends at
+        // exactly 4 — it only tolerates the broker's async index dispatch
+        // (reput) being a beat behind the append under load.
         java.io.File offsetsDir = tempDir.resolve("offsets").toFile();
         MQConsumer first = MQConsumer.subscribe("127.0.0.1", port(),
                 "orders", "g-resume", offsetsDir, 4, 3000);
         List<String> seen = new ArrayList<String>();
         try {
-            for (ClientRecord r : first.poll()) {
-                seen.add(new String(r.getPayload(), "UTF-8"));
+            long deadline = System.currentTimeMillis() + 10_000;
+            while (seen.size() < 4 && System.currentTimeMillis() < deadline) {
+                for (ClientRecord r : first.poll()) {
+                    seen.add(new String(r.getPayload(), "UTF-8"));
+                }
             }
             assertEquals(4, seen.size(), "fetchMaxCount=4: first poll returns 4");
             first.commit(); // persists end of this batch

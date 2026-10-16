@@ -316,22 +316,20 @@ public final class ReplicationService
     // ReplicationInbound (server EventLoop) + ClusterClient.Router (client IO)
     // ------------------------------------------------------------------
 
+    /**
+     * One entry for both transports: frames from the server pipeline
+     * (DispatcherHandler) and from the ClusterClient's own connections
+     * (PeerHandler — where a simultaneous-open connection can deliver a
+     * follower's fetch). Election messages enqueue onto the Raft inbox —
+     * safe on any thread; FOLLOWER_FETCH (the heavy one: mmap reads,
+     * arbitration, bookkeeping) moves to the replication thread, and the
+     * response goes back on the channel it came from.
+     */
     @Override
     public void onFrame(Channel channel, Frame frame) {
         routeRaftFrame(frame, channel);
     }
 
-    @Override
-    public void onRaftFrame(Frame frame) {
-        routeRaftFrame(frame, null);
-    }
-
-    /**
-     * Election messages are O(1) enqueues onto the Raft inbox — safe on any
-     * thread. FOLLOWER_FETCH (the heavy one: mmap reads, arbitration,
-     * bookkeeping) moves to the replication thread, and the response goes
-     * back on the channel it came from.
-     */
     private void routeRaftFrame(Frame frame, final Channel replyTo) {
         try {
             switch (frame.type()) {
