@@ -1,8 +1,22 @@
-// mini-MQ wire protocol bodies (M1).
+// mini-MQ wire protocol bodies (M1; FETCH_RESP layout v1.2 in M2).
 //
 // The frame layer (see docs/protocol.md) is a 16-byte fixed header:
 //   MAGIC(2B 0xCACE) VERSION(1B 0x01) TYPE(1B) REQUEST_ID(8B) BODY_LENGTH(4B)
 // and BODY is one of the messages below, serialized with protobuf.
+//
+// M2 zero-copy: a FETCH_RESP body is [4B meta_len][FetchResponse][raw]:
+//   - meta_len is big-endian (frame-header convention, NOT storage
+//     little-endian) and bounds the protobuf meta so the raw tail can start
+//     right after it;
+//   - zero_copy = false: records carry their payload inline, raw is empty
+//     (the M1 shape, prefixed);
+//   - zero_copy = true: records carry no payload; raw holds the CommitLog
+//     bytes for [records[0].offset, last record end) verbatim — the broker
+//     sends them with FileRegion/sendfile, the consumer locates record i at
+//     raw position (offset_i - offset_0) and decodes with the storage codec.
+//     NOTE: the raw span may contain foreign-topic records in between (the
+//     CommitLog is a single mixed log); the consumer only decodes the
+//     offsets listed in meta. Fine-grained access control arrives with M3+.
 syntax = "proto3";
 
 package minimq;
@@ -22,9 +36,23 @@ message MessageData {
   int64 timestamp = 4;
 }
 
+// M3 durability span. ACKS_1 is the default: an unset field must never
+// degrade an M1/M2 producer into fire-and-forget.
+enum AckMode {
+  // Ack after local append (gated by the flush mode) — M1/M2 semantics.
+  ACKS_1 = 0;
+  // Never wait: offsets are meaningless, status is the only signal.
+  ACKS_0 = 1;
+  // Ack after the batch is below the replication high watermark, i.e.
+  // replicated to every ISR member (Kafka acks=-1; "all" means ISR, not
+  // every replica that ever existed).
+  ACKS_ALL = 2;
+}
+
 // TYPE = PRODUCE
 message ProduceRequest {
   repeated MessageData messages = 1;
+  AckMode acks = 2;
 }
 
 // TYPE = PRODUCE_ACK
@@ -33,6 +61,13 @@ message ProduceAck {
   repeated int64 offsets = 1;
   ProduceStatus status = 2;
   string error = 3;
+  // Machine-readable failure cause (M3). Retries and redirects key off
+  // this, not off the error string.
+  ErrorCode error_code = 4;
+  // For NOT_LEADER: "host:port" of the current leader (best knowledge of
+  // the node answering). Empty when unknown — the client then falls back
+  // to its bootstrap list.
+  string leader_hint = 5;
 }
 
 enum ProduceStatus {
@@ -40,16 +75,52 @@ enum ProduceStatus {
   // Broker business pool saturated: producer should back off and retry.
   RETRY_LATER = 1;
   ERROR = 2;
+  // M4 dedup window: every message in the request matched a seq_key already
+  // in the leader's window; nothing was appended and offsets carry the
+  // ORIGINAL offsets of the first append (the retry converged). The window
+  // is session-scoped (in-memory, per broker process): a retry that lands on
+  // a DIFFERENT leader is appended again — at-least-once, consumer-side
+  // idempotency by seq_key/key_hash stays the final arbiter.
+  DUPLICATE = 3;
+}
+
+// M3 application-level error codes, shared by PRODUCE_ACK and FETCH_RESP.
+enum ErrorCode {
+  NONE = 0;
+  // This node is not the leader (or not a leader any more). Client action:
+  // follow leader_hint, else re-bootstrap.
+  NOT_LEADER = 1;
+  // Request carries a leader epoch older than the recipient's — the old
+  // leader's arbitration rejection (requests from a superseded epoch are
+  // refused so stale authority cannot pollute the log).
+  STALE_EPOCH = 2;
+  // acks=all while ISR shrank below min.insync.replicas: the write is
+  // REFUSED rather than silently degraded.
+  ISR_TOO_SMALL = 3;
+  // FOLLOWER_FETCH response: the follower's log diverged past the epoch
+  // boundary; error_value carries the offset to truncate to, after which
+  // the follower re-fetches from there.
+  TRUNCATE_TO = 4;
 }
 
 // ---------- consume path ----------
 
-// TYPE = FETCH
+// TYPE = FETCH (consumer) / FOLLOWER_FETCH (replica sync, M3)
 message FetchRequest {
   string topic = 1;
   // Global CommitLog scan position: consume from here (inclusive).
   int64 offset = 2;
   int32 max_count = 3;
+  // ---- replica sync fields (FOLLOWER_FETCH only; consumers leave 0) ----
+  // Sending replica's node id.
+  int32 follower_id = 4;
+  // Epoch of the leader whose log the follower last synced from — the
+  // epoch-arbitration key (KIP-101 shape).
+  int64 follower_epoch = 5;
+  // Byte budget for the batch (FOLLOWER_FETCH only; consumers use
+  // max_count). The leader returns whole records until the budget or the
+  // log end, whichever first.
+  int32 max_bytes = 6;
 }
 
 message RecordData {
@@ -62,6 +133,18 @@ message RecordData {
   // The original key string is not returned (storage keeps only the hash);
   // M4 idempotent consumption keys off this value.
   int64 key_hash = 6;
+  // M2 zero-copy: encoded record size in bytes. Filled in zero_copy
+  // responses (where payload stays empty and travels in the raw tail);
+  // legacy responses leave it 0 and rely on the inline payload.
+  int32 size = 7;
+  // M2 zero-copy self-describing payload location: payload_offset = bytes
+  // from the record's start (in the raw tail) to its payload; payload_len =
+  // payload bytes. Together with `offset` this lets the consumer slice the
+  // payload out of the raw tail WITHOUT knowing the storage record layout —
+  // the format stays owned by the storage codec. Legacy responses leave
+  // both 0 and rely on the inline payload.
+  int32 payload_offset = 8;
+  int32 payload_len = 9;
 }
 
 // TYPE = FETCH_RESP
@@ -71,8 +154,24 @@ message FetchResponse {
   // consumer persists as its committed offset), even when records were
   // filtered out by topic.
   int64 next_offset = 2;
-  // M3 replication high watermark; equals broker max offset until then.
+  // Replication high watermark (M3): consumers only see records strictly
+  // below it. Equals broker max offset on a single-node broker.
   int64 high_watermark = 3;
+  // M2 zero-copy: see the body-layout note at the top of this file.
+  bool zero_copy = 4;
+  // ---- M3 replication fields (meaningful in FOLLOWER_FETCH responses;
+  // consumers ignore them) ----
+  // Current leader epoch. Followers adopt it and record the boundary.
+  int64 leader_epoch = 5;
+  // Offset the current leader's own writes start at (its epoch checkpoint
+  // entry) — what a follower records when adopting leader_epoch.
+  int64 epoch_start_offset = 6;
+  // Error/truncation channel (see ErrorCode). TRUNCATE_TO carries the
+  // truncate point in error_value.
+  ErrorCode error_code = 7;
+  int64 error_value = 8;
+  // For NOT_LEADER on consumer FETCH: "host:port" of the current leader.
+  string leader_hint = 9;
 }
 
 // ---------- offset commit (defined in M1, broker-side storage from M3) ----------
@@ -88,4 +187,53 @@ message CommitOffsetRequest {
 // TYPE = COMMIT_OFFSET_ACK
 message CommitOffsetAck {
   bool ok = 1;
+}
+
+// ---------- M3 replication & election (node <-> node) ----------
+
+// TYPE = VOTE. Raft RequestVote; pre_vote = true marks the PreVote probe
+// (etcd default-on): a node isolated from the quorum probes "could I win?"
+// WITHOUT bumping its term, so a healed node cannot disrupt a live leader
+// with an inflated term.
+message VoteRequest {
+  int32 candidate_id = 1;
+  // Candidate's current term; term+1 when pre_vote = true (the term it
+  // WOULD campaign with).
+  int64 term = 2;
+  bool pre_vote = 3;
+  // Log currency of the candidate (the up-to-date check): epoch of the
+  // leader that wrote its last synced record + its log end offset. A voter
+  // only grants to a candidate at least as current as itself.
+  int64 last_log_epoch = 4;
+  int64 last_log_offset = 5;
+}
+
+// TYPE = VOTE_RESP
+message VoteResponse {
+  // Responder's current term — how a candidate/leader learns it is stale
+  // and steps down (the "see a bigger term, relinquish" convergence rule).
+  int64 term = 1;
+  bool granted = 2;
+  // Who answered: the candidate tallies per-responder (a retransmitted
+  // response must not count twice).
+  int32 responder_id = 3;
+}
+
+// TYPE = HEARTBEAT (leader -> follower, the authority lease)
+message HeartbeatRequest {
+  int32 leader_id = 1;
+  int64 term = 2;
+  // Leader epoch (== term of the election it won).
+  int64 epoch = 3;
+  // Leader's current high watermark (informational for followers).
+  int64 high_watermark = 4;
+}
+
+// TYPE = HEARTBEAT_RESP
+message HeartbeatResponse {
+  // Responder's current term: a leader seeing a bigger term here steps
+  // down immediately — split-brain ends at the first contact.
+  int64 term = 1;
+  // Who answered (the leader's liveness map is per-follower).
+  int32 responder_id = 2;
 }

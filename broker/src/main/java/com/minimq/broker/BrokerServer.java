@@ -1,5 +1,6 @@
 package com.minimq.broker;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -10,6 +11,9 @@ import java.util.logging.Logger;
 import com.minimq.protocol.FrameDecoder;
 import com.minimq.protocol.FrameEncoder;
 import com.minimq.storage.CommitLog;
+import com.minimq.storage.ConsumeQueueStore;
+import com.minimq.storage.FlushMode;
+import com.minimq.storage.FlushService;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -26,13 +30,13 @@ import io.netty.util.concurrent.EventExecutor;
  * Netty server with the three-tier threading model (M1 task 2):
  *
  * <ul>
- *   <li>BossGroup — 1 thread, accept only (a once-per-connection microsecond
- *   operation; more threads would be waste),</li>
- *   <li>WorkerGroup — CPU x 2 threads, read/write + frame codec; each channel
- *   is bound to one EventLoop for its lifetime, so per-connection events are
- *   serial and lock-free,</li>
- *   <li>Business pool — bounded queue, AbortPolicy; saturation becomes
- *   RETRY_LATER instead of ever blocking an EventLoop.</li>
+ * <li>BossGroup — 1 thread, accept only (a once-per-connection microsecond
+ * operation; more threads would be waste),</li>
+ * <li>WorkerGroup — CPU x 2 threads, read/write + frame codec; each channel
+ * is bound to one EventLoop for its lifetime, so per-connection events are
+ * serial and lock-free,</li>
+ * <li>Business pool — bounded queue, AbortPolicy; saturation becomes
+ * RETRY_LATER instead of ever blocking an EventLoop.</li>
  * </ul>
  *
  * Graceful shutdown order: stop accepting (close the listener) -> drain the
@@ -48,6 +52,27 @@ public class BrokerServer {
     private final Object lifecycleLock = new Object();
 
     private CommitLog commitLog;
+    private ConsumeQueueStore consumeQueueStore;
+    private FlushService flushService;
+    /**
+     * The cluster assembly, or null on a standalone broker (M1/M2 behavior:
+     * the leader gate is always open, the "HW" is the local log end). Setup
+     * order matters: it opens RaftState/EpochCheckpoint under the store root
+     * and needs both storage handles alive.
+     */
+    private ReplicationService replication;
+    /**
+     * M4 partition injection handle (always present, inert until the chaos
+     * control port adds peer ids to the blacklist — see PartitionShield).
+     */
+    private PartitionShield shield = new PartitionShield();
+    /**
+     * M4 leader dedup window, or null when disabled (dedupWindowEntries=0,
+     * the M1-M3 semantics: every produce appends).
+     */
+    private DedupWindow dedupWindow;
+    /** M4 loopback chaos control port, or null when not configured. */
+    private ChaosControlServer chaosControl;
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
     private ThreadPoolExecutor businessPool;
@@ -65,9 +90,28 @@ public class BrokerServer {
                 return;
             }
             commitLog = CommitLog.open(config.getStoreDir(), config.getSegmentSize());
-            BrokerRequestHandler handler = createRequestHandler(commitLog);
+            // ConsumeQueue root sits NEXT TO the commitlog dir (same store
+            // root, e.g. data/commitlog + data/consumequeue). The dispatcher
+            // replays/rebuilds the index tail at open; FETCH goes through it.
+            consumeQueueStore = ConsumeQueueStore.open(consumeQueueRoot(config), commitLog);
+            if (config.isClustered()) {
+                replication = new ReplicationService(config, commitLog, consumeQueueStore, shield);
+            }
+            if (config.getDedupWindowEntries() > 0) {
+                dedupWindow = new DedupWindow(config.getDedupWindowEntries());
+            }
+            BrokerRequestHandler handler = createRequestHandler(commitLog, consumeQueueStore);
             businessPool = createBusinessPool(config);
-            DispatcherHandler dispatcher = new DispatcherHandler(businessPool, handler);
+            // Cluster frames (VOTE/HEARTBEAT/FOLLOWER_FETCH...) split off at
+            // the EventLoop without parsing; null keeps the standalone path.
+            DispatcherHandler dispatcher = new DispatcherHandler(businessPool, handler, replication);
+            // SYNC/ASYNC tiers need the group-commit flush thread; OS_FLUSH
+            // (M1 behavior) skips it entirely.
+            if (config.getFlushMode() != FlushMode.OS_FLUSH) {
+                flushService = new FlushService(
+                        commitLog, config.getFlushLingerUs(), config.getFlushBatchCount());
+                flushService.start();
+            }
 
             bossGroup = new NioEventLoopGroup(1, new DefaultThreadFactory("mini-mq-boss"));
             workerGroup = new NioEventLoopGroup(config.getWorkerThreads(),
@@ -92,6 +136,19 @@ public class BrokerServer {
                         }
                     });
             serverChannel = bootstrap.bind(config.getPort()).sync().channel();
+            // Election starts only once the port listens: peers answering
+            // our votes must be able to reach us.
+            if (replication != null) {
+                replication.start();
+            }
+            // M4 chaos control (loopback only): started AFTER the election
+            // machinery so the first "state" the harness reads is a real
+            // one. A broker without a chaos port has no ops surface.
+            if (config.getChaosControlPort() > 0) {
+                chaosControl = new ChaosControlServer(
+                        config.getChaosControlPort(), shield, chaosStateJson());
+                chaosControl.start();
+            }
             started = true;
 
             shutdownHook = new Thread(new Runnable() {
@@ -139,6 +196,78 @@ public class BrokerServer {
         return started;
     }
 
+    /**
+     * The group-commit flush thread, or null in OS_FLUSH. Exposed for the
+     * bench: forceSweeps() is the aggregation observability (messages per
+     * force = how well the linger window batches concurrent writers).
+     */
+    public FlushService flushService() {
+        return flushService;
+    }
+
+    /**
+     * The cluster assembly, or null on a standalone broker (monitoring /
+     * integration tests: role, term, ISR snapshot).
+     */
+    public ReplicationService replication() {
+        return replication;
+    }
+
+    /** The M4 partition injection handle (tests / chaos harness). */
+    public PartitionShield shield() {
+        return shield;
+    }
+
+    /** The M4 leader dedup window, or null when disabled (tests / harness). */
+    public DedupWindow dedupWindow() {
+        return dedupWindow;
+    }
+
+    /** The M4 chaos control port's actual bound port, or -1 when disabled. */
+    public int chaosPort() {
+        ChaosControlServer cc = chaosControl;
+        return cc != null ? cc.port() : -1;
+    }
+
+    /**
+     * The chaos control "state" payload: the matrix's timing decisions ("kill
+     * when replication lag is large") read these numbers straight from the
+     * node under test. Hand-rolled JSON — the broker has no JSON dependency
+     * and this is a fixed, tiny, ops-only shape.
+     */
+    private java.util.function.Supplier<String> chaosStateJson() {
+        return new java.util.function.Supplier<String>() {
+            @Override
+            public String get() {
+                StringBuilder sb = new StringBuilder(192);
+                sb.append("{\"node\":").append(config.getNodeId())
+                        .append(",\"role\":\"");
+                ReplicationService repl = replication;
+                if (repl != null) {
+                    sb.append(repl.role())
+                            .append("\",\"term\":").append(repl.term())
+                            .append(",\"leader\":").append(repl.isLeader())
+                            .append(",\"lastSeenLeader\":").append(repl.lastSeenLeader())
+                            .append(",\"hw\":").append(repl.highWatermark())
+                            .append(",\"isr\":").append(ChaosControlServer.ids(repl.isrSnapshot()));
+                } else {
+                    sb.append("STANDALONE\",\"leader\":true,\"hw\":").append(commitLog.maxOffset());
+                }
+                sb.append(",\"leo\":").append(commitLog.maxOffset())
+                        .append(",\"flushed\":").append(commitLog.flushedOffset());
+                DedupWindow dw = dedupWindow;
+                if (dw != null) {
+                    sb.append(",\"dedup\":{\"size\":").append(dw.size())
+                            .append(",\"hits\":").append(dw.hits())
+                            .append(",\"checks\":").append(dw.checks()).append('}');
+                }
+                return sb.append(",\"inBlack\":")
+                        .append(ChaosControlServer.ids(shield.inBlackSnapshot()))
+                        .append('}').toString();
+            }
+        };
+    }
+
     /** Idempotent; safe to call from a shutdown hook or directly. */
     public void shutdown() {
         synchronized (lifecycleLock) {
@@ -157,15 +286,39 @@ public class BrokerServer {
                 }
                 // 1. stop accepting new connections and requests
                 serverChannel.close().syncUninterruptibly();
-                // 2. drain in-flight business work (workers alive: responses flow)
+                // 2. stop the cluster (election, sync, ISR sweep) — this also
+                // wakes any acks=all producer parked on the HW, so the
+                // business pool below can actually drain
+                if (replication != null) {
+                    replication.close();
+                    replication = null;
+                }
+                // 2b. close the M4 chaos control port before the state it
+                // reports starts disappearing underneath it
+                if (chaosControl != null) {
+                    chaosControl.close();
+                    chaosControl = null;
+                }
+                // 3. drain in-flight business work (workers alive: responses flow)
                 businessPool.shutdown();
                 if (!businessPool.awaitTermination(10, TimeUnit.SECONDS)) {
                     businessPool.shutdownNow();
                 }
-                // 3. stop IO threads
+                // 4. stop IO threads
                 bossGroup.shutdownGracefully(0, 2, TimeUnit.SECONDS).syncUninterruptibly();
                 workerGroup.shutdownGracefully(0, 2, TimeUnit.SECONDS).syncUninterruptibly();
-                // 4. flush dirty pages and release the mmaps
+                // 5. final force (covers everything appended, wakes any SYNC
+                // waiter still parked) then flush and close storage
+                if (flushService != null) {
+                    flushService.close();
+                    flushService = null;
+                }
+                // 6. stop the index dispatcher (it reads the log; must not
+                // outlive it), force the queues it filled
+                if (consumeQueueStore != null) {
+                    consumeQueueStore.close();
+                    consumeQueueStore = null;
+                }
                 commitLog.flush();
                 commitLog.close();
             } catch (InterruptedException e) {
@@ -184,10 +337,29 @@ public class BrokerServer {
 
     /**
      * Request handler factory; tests override this to inject slow/failing
-     * handlers for backpressure and failure-path integration tests.
+     * handlers for backpressure and failure-path integration tests. The
+     * replication gate is the cluster's leader/HW/acks-all authority on a
+     * clustered broker, and the always-open standalone twin otherwise.
      */
-    protected BrokerRequestHandler createRequestHandler(CommitLog commitLog) {
-        return new BrokerRequestHandler(commitLog, config.getFetchScanBudget());
+    protected BrokerRequestHandler createRequestHandler(CommitLog commitLog,
+            ConsumeQueueStore consumeQueues) {
+        ReplicationGate gate = replication != null
+                ? replication
+                : ReplicationGate.standalone(commitLog);
+        return new BrokerRequestHandler(commitLog, consumeQueues,
+                config.getFlushMode(), config.getFlushAwaitTimeoutMs(),
+                config.isZeroCopyFetch(), gate, config.getReplicationAwaitTimeoutMs(),
+                dedupWindow);
+    }
+
+    /**
+     * {@code data/commitlog} -> {@code data/consumequeue}; a store dir without
+     * a parent keeps the consumequeue dir in the working directory.
+     */
+    private static File consumeQueueRoot(BrokerConfig config) {
+        File storeDir = config.getStoreDir();
+        File parent = storeDir.getParentFile();
+        return parent != null ? new File(parent, "consumequeue") : new File("consumequeue");
     }
 
     private static ThreadPoolExecutor createBusinessPool(BrokerConfig config) {

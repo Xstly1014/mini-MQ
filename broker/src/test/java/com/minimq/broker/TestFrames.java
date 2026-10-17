@@ -1,5 +1,7 @@
 package com.minimq.broker;
 
+import java.nio.ByteBuffer;
+
 import com.google.protobuf.ByteString;
 import com.minimq.protocol.Frame;
 import com.minimq.protocol.MessageType;
@@ -12,7 +14,14 @@ final class TestFrames {
     }
 
     static Frame produce(long requestId, String topic, String... payloads) {
-        MqProto.ProduceRequest.Builder b = MqProto.ProduceRequest.newBuilder();
+        return produce(requestId, topic, MqProto.AckMode.ACKS_1, payloads);
+    }
+
+    /** M3: same shape, explicit durability span (acks=0/1/all). */
+    static Frame produce(long requestId, String topic, MqProto.AckMode acks,
+            String... payloads) {
+        MqProto.ProduceRequest.Builder b = MqProto.ProduceRequest.newBuilder()
+                .setAcks(acks);
         for (String p : payloads) {
             b.addMessages(MqProto.MessageData.newBuilder()
                     .setTopic(topic)
@@ -36,7 +45,14 @@ final class TestFrames {
         return MqProto.ProduceAck.parseFrom(f.body());
     }
 
+    /**
+     * FETCH_RESP body layout v1.2: [4B metaLen][meta][raw tail]; the meta is
+     * the protobuf, the raw tail (zero-copy path) is NOT part of the frame
+     * body object — it rides in FileRegions.
+     */
     static MqProto.FetchResponse parseFetch(Frame f) throws Exception {
-        return MqProto.FetchResponse.parseFrom(f.body());
+        byte[] body = f.body();
+        int metaLen = ByteBuffer.wrap(body).getInt(0);
+        return MqProto.FetchResponse.parseFrom(ByteBuffer.wrap(body, 4, metaLen));
     }
 }

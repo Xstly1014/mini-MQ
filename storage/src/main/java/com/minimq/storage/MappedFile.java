@@ -25,12 +25,19 @@ public class MappedFile implements Closeable {
     private final int fileSize;
     private MappedByteBuffer mappedByteBuffer;
     private volatile int wrotePosition;
+    /**
+     * Kept open for {@link #channel()} — the zero-copy FETCH path hands the
+     * FileChannel to Netty's FileRegion (sendfile). Closed by {@link #close}.
+     */
+    private final RandomAccessFile raf;
 
     public MappedFile(File file, int fileSize) throws IOException {
         this.file = file;
         this.fileFromOffset = parseOffset(file.getName());
         this.fileSize = fileSize;
-        try (RandomAccessFile raf = new RandomAccessFile(file, "rw")) {
+        this.raf = new RandomAccessFile(file, "rw");
+        boolean ok = false;
+        try {
             long len = raf.length();
             if (len != 0 && len != fileSize) {
                 throw new IOException("segment " + file + " has length " + len
@@ -41,6 +48,11 @@ public class MappedFile implements Closeable {
             }
             this.mappedByteBuffer = raf.getChannel()
                     .map(FileChannel.MapMode.READ_WRITE, 0, fileSize);
+            ok = true;
+        } finally {
+            if (!ok) {
+                raf.close();
+            }
         }
         this.mappedByteBuffer.order(ByteOrder.LITTLE_ENDIAN);
     }
@@ -135,6 +147,15 @@ public class MappedFile implements Closeable {
         return file;
     }
 
+    /**
+     * The live channel for zero-copy transfers (FileRegion). Shared across
+     * concurrent readers — FileChannel positional operations used by Netty
+     * (transferTo with an explicit position) are thread safe.
+     */
+    public FileChannel channel() {
+        return raf.getChannel();
+    }
+
     @Override
     public void close() {
         if (mappedByteBuffer == null) {
@@ -142,6 +163,11 @@ public class MappedFile implements Closeable {
         }
         unmap(mappedByteBuffer);
         mappedByteBuffer = null;
+        try {
+            raf.close();
+        } catch (IOException ignored) {
+            // close-path best effort; the mapping is already released
+        }
     }
 
     /**

@@ -77,6 +77,36 @@ class MQProducerTest {
         producer.close();
     }
 
+    // ------------------------------------------------------------------
+    // M3: the acks tier travels in the wire body
+    // ------------------------------------------------------------------
+
+    @Test
+    void defaultAcksIsOneOnTheWire() throws Exception {
+        FakeTransport transport = new FakeTransport((req, i) ->
+                done(produceAck(MqProto.ProduceStatus.OK, 0L)));
+        MQProducer producer = new MQProducer(transport, 1, 60_000, 3, 1);
+
+        producer.send("t", new byte[1]).get(2, TimeUnit.SECONDS);
+        assertEquals(MqProto.AckMode.ACKS_1, transport.lastBody().getAcks(),
+                "unset must degrade to M1/M2 semantics, never to fire-and-forget");
+
+        producer.close();
+    }
+
+    @Test
+    void acksAllFlagTravelsInTheProduceBody() throws Exception {
+        FakeTransport transport = new FakeTransport((req, i) ->
+                done(produceAck(MqProto.ProduceStatus.OK, 0L)));
+        MQProducer producer = new MQProducer(transport, 1, 60_000, 3, 1)
+                .acks(MqProto.AckMode.ACKS_ALL);
+
+        producer.send("t", new byte[1]).get(2, TimeUnit.SECONDS);
+        assertEquals(MqProto.AckMode.ACKS_ALL, transport.lastBody().getAcks());
+
+        producer.close();
+    }
+
     @Test
     void manySendsWithAsOneBatchOnClose() throws Exception {
         // huge byte budget + long linger: nothing flushes until close()

@@ -10,6 +10,11 @@ import io.netty.handler.codec.MessageToByteEncoder;
  * is little-endian by design — the two conventions never mix, see
  * docs/protocol.md).
  *
+ * BODY_LENGTH covers {@link Frame#frameBodyLength()} — body plus the
+ * zero-copy trailer the writer appends after this buffer (see
+ * {@link ZeroCopyFrame}); the peer therefore reads the whole thing as one
+ * frame. The trailer bytes themselves are NOT written here.
+ *
  * The length field is written here by hand; do NOT add a
  * LengthFieldPrepender to the pipeline (double length prefix bug).
  */
@@ -22,7 +27,7 @@ public class FrameEncoder extends MessageToByteEncoder<Frame> {
         out.writeByte(Frame.VERSION);
         out.writeByte(msg.type().value());
         out.writeLong(msg.requestId());
-        out.writeInt(body.length);
+        out.writeInt(msg.frameBodyLength());
         out.writeBytes(body);
     }
 }

@@ -191,6 +191,14 @@ public final class ClientChannel implements Transport {
         channel.close().awaitUninterruptibly(5, TimeUnit.SECONDS);
         failAll(pending, new IOException("channel closed"));
         timeoutScheduler.shutdownNow();
-        group.shutdownGracefully(0, 100, TimeUnit.MILLISECONDS).awaitUninterruptibly();
+        // Fire-and-forget ON PURPOSE: awaiting the loop's graceful shutdown
+        // deadlocks when close() is invoked from the loop's own thread. That
+        // is exactly what FailoverTransport.invalidate does — a NOT_LEADER
+        // ack completes the request future synchronously on the event loop,
+        // and its whenComplete callback closes this very channel. The
+        // shutdown task needs the same loop thread that would be blocked
+        // awaiting it (M3-8: first-connect-to-a-follower hung the producer
+        // forever with this exact stack).
+        group.shutdownGracefully(0, 100, TimeUnit.MILLISECONDS);
     }
 }

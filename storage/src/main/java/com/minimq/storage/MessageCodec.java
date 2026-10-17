@@ -85,28 +85,133 @@ public final class MessageCodec {
      * mirroring decode() exactly.
      */
     public static byte[] encode(Message msg) {
+        int total = sizeOf(msg);
+        byte[] out = new byte[total];
+        int written = encodeInto(msg, out);
+        if (written != total) {
+            throw new IllegalStateException("encodeInto wrote " + written + ", expected " + total);
+        }
+        return out;
+    }
+
+    /**
+     * Encodes into caller-managed scratch (the pooled path — see
+     * {@link CodecPools}). Only {@code [0, return)} is defined: bytes past
+     * it may hold a previous record's residue, and callers must pass the
+     * returned length around instead of trusting {@code buf.length}.
+     *
+     * @return bytes written, or the NEGATED required capacity when
+     *         {@code buf} is too small (nothing written). Messages larger
+     *         than {@link #MAX_MESSAGE_SIZE} throw like {@link #encode}.
+     */
+    public static int encodeInto(Message msg, byte[] buf) {
         byte[] payload = msg.getPayload();
         byte[] topic = topicBytes(msg.getTopic());
         int total = HEADER_SIZE + topic.length + payload.length;
         if (total > MAX_MESSAGE_SIZE) {
             throw new IllegalArgumentException("message too large: " + total + " > " + MAX_MESSAGE_SIZE);
         }
-        byte[] out = new byte[total];
-        ByteBuffer buf = ByteBuffer.wrap(out).order(ByteOrder.LITTLE_ENDIAN);
-        buf.putInt(OFFSET_TOTAL_SIZE, total);
-        buf.put(OFFSET_MAGIC, (byte) MAGIC);
-        buf.putLong(OFFSET_TIMESTAMP, msg.getTimestamp());
-        buf.putLong(OFFSET_KEY_HASH, msg.getKeyHash());
-        buf.putShort(OFFSET_TOPIC_LEN, (short) topic.length);
-        buf.putInt(OFFSET_PAYLOAD_LEN, payload.length);
-        System.arraycopy(topic, 0, out, HEADER_SIZE, topic.length);
-        System.arraycopy(payload, 0, out, HEADER_SIZE + topic.length, payload.length);
+        if (buf.length < total) {
+            return -total;
+        }
+        ByteBuffer wrapped = ByteBuffer.wrap(buf).order(ByteOrder.LITTLE_ENDIAN);
+        wrapped.putInt(OFFSET_TOTAL_SIZE, total);
+        wrapped.put(OFFSET_MAGIC, (byte) MAGIC);
+        wrapped.putLong(OFFSET_TIMESTAMP, msg.getTimestamp());
+        wrapped.putLong(OFFSET_KEY_HASH, msg.getKeyHash());
+        wrapped.putShort(OFFSET_TOPIC_LEN, (short) topic.length);
+        wrapped.putInt(OFFSET_PAYLOAD_LEN, payload.length);
+        System.arraycopy(topic, 0, buf, HEADER_SIZE, topic.length);
+        System.arraycopy(payload, 0, buf, HEADER_SIZE + topic.length, payload.length);
 
-        CRC32 crc32 = new CRC32();
-        crc32.update(out, OFFSET_MAGIC, OFFSET_CRC - OFFSET_MAGIC);
-        crc32.update(out, OFFSET_TIMESTAMP, total - OFFSET_TIMESTAMP);
-        buf.putInt(OFFSET_CRC, (int) crc32.getValue());
-        return out;
+        CRC32 crc32 = CodecPools.borrowCrc32();
+        crc32.update(buf, OFFSET_MAGIC, OFFSET_CRC - OFFSET_MAGIC);
+        crc32.update(buf, OFFSET_TIMESTAMP, total - OFFSET_TIMESTAMP);
+        wrapped.putInt(OFFSET_CRC, (int) crc32.getValue());
+        return total;
+    }
+
+    /** Header-only decode result: no payload allocation (zero-copy path). */
+    public static final class HeaderResult {
+        public final DecodeStatus status;
+        public final int size;
+        public final long timestamp;
+        public final long keyHash;
+        public final String topic;
+        /** Payload position within the record (HEADER_SIZE + topicLen). */
+        public final int payloadOffset;
+        /** Payload bytes within the record (size - HEADER_SIZE - topicLen). */
+        public final int payloadLen;
+
+        HeaderResult(DecodeStatus status, int size,
+                long timestamp, long keyHash, String topic) {
+            this(status, size, timestamp, keyHash, topic, 0, 0);
+        }
+
+        HeaderResult(DecodeStatus status, int size,
+                long timestamp, long keyHash, String topic,
+                int payloadOffset, int payloadLen) {
+            this.status = status;
+            this.size = size;
+            this.timestamp = timestamp;
+            this.keyHash = keyHash;
+            this.topic = topic;
+            this.payloadOffset = payloadOffset;
+            this.payloadLen = payloadLen;
+        }
+    }
+
+    /**
+     * Decodes and CRC-validates the record header without materializing the
+     * payload (the zero-copy FETCH path builds its response meta from this;
+     * the payload bytes travel as FileRegion straight from the page cache).
+     * Same status contract as {@link #decode}.
+     */
+    public static HeaderResult decodeHeader(ByteBuffer buf, int pos) {
+        int limit = buf.limit();
+        if (limit - pos < HEADER_SIZE) {
+            return new HeaderResult(DecodeStatus.INCOMPLETE, 0, 0, 0, null);
+        }
+        int total = buf.getInt(pos + OFFSET_TOTAL_SIZE);
+        if (total == 0) {
+            return new HeaderResult(DecodeStatus.EMPTY, 0, 0, 0, null);
+        }
+        if (total < HEADER_SIZE || total > MAX_MESSAGE_SIZE) {
+            return new HeaderResult(DecodeStatus.CORRUPT, 0, 0, 0, null);
+        }
+        if (limit - pos < total) {
+            return new HeaderResult(DecodeStatus.INCOMPLETE, 0, 0, 0, null);
+        }
+        int magic = buf.get(pos + OFFSET_MAGIC) & 0xFF;
+        if (magic != MAGIC) {
+            return new HeaderResult(DecodeStatus.CORRUPT, 0, 0, 0, null);
+        }
+        int topicLen = buf.getShort(pos + OFFSET_TOPIC_LEN) & 0xFFFF;
+        int payloadLen = buf.getInt(pos + OFFSET_PAYLOAD_LEN);
+        if (topicLen > MAX_TOPIC_LENGTH
+                || payloadLen < 0
+                || HEADER_SIZE + topicLen + payloadLen != total) {
+            return new HeaderResult(DecodeStatus.CORRUPT, 0, 0, 0, null);
+        }
+        CRC32 crc32 = CodecPools.borrowCrc32();
+        ByteBuffer head = buf.duplicate();
+        head.position(pos + OFFSET_MAGIC).limit(pos + OFFSET_CRC);
+        crc32.update(head);
+        ByteBuffer body = buf.duplicate();
+        body.position(pos + OFFSET_TIMESTAMP).limit(pos + total);
+        crc32.update(body);
+        if ((int) crc32.getValue() != buf.getInt(pos + OFFSET_CRC)) {
+            return new HeaderResult(DecodeStatus.CORRUPT, 0, 0, 0, null);
+        }
+        byte[] topic = new byte[topicLen];
+        ByteBuffer topicView = buf.duplicate();
+        topicView.position(pos + HEADER_SIZE).limit(pos + HEADER_SIZE + topicLen);
+        topicView.get(topic);
+        return new HeaderResult(DecodeStatus.OK, total,
+                buf.getLong(pos + OFFSET_TIMESTAMP),
+                buf.getLong(pos + OFFSET_KEY_HASH),
+                new String(topic, StandardCharsets.UTF_8),
+                HEADER_SIZE + topicLen, payloadLen);
     }
 
     public enum DecodeStatus {
@@ -165,7 +270,7 @@ public final class MessageCodec {
                 || HEADER_SIZE + topicLen + payloadLen != total) {
             return DecodeResult.CORRUPT_RES;
         }
-        CRC32 crc32 = new CRC32();
+        CRC32 crc32 = CodecPools.borrowCrc32();
         ByteBuffer head = buf.duplicate();
         head.position(pos + OFFSET_MAGIC).limit(pos + OFFSET_CRC);
         crc32.update(head);

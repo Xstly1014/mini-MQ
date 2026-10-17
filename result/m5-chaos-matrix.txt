@@ -1,0 +1,1549 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ---------------------< com.minimq:mini-mq-client >----------------------
+[INFO] Building mini-mq-client 0.1.0-SNAPSHOT
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- maven-clean-plugin:2.5:clean (default-clean) @ mini-mq-client ---
+[INFO] Deleting E:\workspace_work\mini-MQ\client\target
+[INFO] 
+[INFO] --- maven-resources-plugin:2.6:resources (default-resources) @ mini-mq-client ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] skip non existing resourceDirectory E:\workspace_work\mini-MQ\client\src\main\resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.10.1:compile (default-compile) @ mini-mq-client ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 10 source files to E:\workspace_work\mini-MQ\client\target\classes
+[INFO] 
+[INFO] --- maven-resources-plugin:2.6:testResources (default-testResources) @ mini-mq-client ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] skip non existing resourceDirectory E:\workspace_work\mini-MQ\client\src\test\resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.10.1:testCompile (default-testCompile) @ mini-mq-client ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 16 source files to E:\workspace_work\mini-MQ\client\target\test-classes
+[INFO] /E:/workspace_work/mini-MQ/client/src/test/java/com/minimq/client/MQProducerTest.java: E:\workspace_work\mini-MQ\client\src\test\java\com\minimq\client\MQProducerTest.java使用了未经检查或不安全的操作。
+[INFO] /E:/workspace_work/mini-MQ/client/src/test/java/com/minimq/client/MQProducerTest.java: 有关详细信息, 请使用 -Xlint:unchecked 重新编译。
+[INFO] 
+[INFO] --- maven-surefire-plugin:2.22.2:test (default-test) @ mini-mq-client ---
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.minimq.client.chaos.ReliabilityMatrixTest
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.logging.InternalLoggerFactory useJdkLoggerFactory
+详细: Using java.util.logging as the default logging framework
+10月 17, 2026 9:27:14 下午 io.netty.channel.MultithreadEventLoopGroup <clinit>
+详细: -Dio.netty.eventLoopThreads: 64
+10月 17, 2026 9:27:14 下午 io.netty.util.concurrent.GlobalEventExecutor <clinit>
+详细: -Dio.netty.globalEventExecutor.quietPeriodSeconds: 1
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.InternalThreadLocalMap <clinit>
+详细: -Dio.netty.threadLocalMap.stringBuilder.initialSize: 1024
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.InternalThreadLocalMap <clinit>
+详细: -Dio.netty.threadLocalMap.stringBuilder.maxSize: 4096
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.PlatformDependent0 explicitNoUnsafeCause0
+详细: -Dio.netty.noUnsafe: false
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.PlatformDependent0 javaVersion0
+详细: Java version: 17
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.PlatformDependent0 <clinit>
+详细: sun.misc.Unsafe.theUnsafe: available
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.PlatformDependent0 <clinit>
+详细: sun.misc.Unsafe.copyMemory: available
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.PlatformDependent0 <clinit>
+详细: sun.misc.Unsafe.storeFence: available
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.PlatformDependent0 <clinit>
+详细: java.nio.Buffer.address: available
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.PlatformDependent0 <clinit>
+详细: direct buffer constructor: unavailable: Reflective setAccessible(true) disabled
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.PlatformDependent0 <clinit>
+详细: java.nio.Bits.unaligned: available, true
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.PlatformDependent0 <clinit>
+详细: jdk.internal.misc.Unsafe.allocateUninitializedArray(int): unavailable: class io.netty.util.internal.PlatformDependent0$7 cannot access class jdk.internal.misc.Unsafe (in module java.base) because module java.base does not export jdk.internal.misc to unnamed module @2758fe70
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.PlatformDependent0 <clinit>
+详细: java.nio.DirectByteBuffer.<init>(long, {int,long}): unavailable
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.PlatformDependent unsafeUnavailabilityCause0
+详细: sun.misc.Unsafe: available
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.PlatformDependent tmpdir0
+详细: -Dio.netty.tmpdir: C:\Users\Admin\AppData\Local\Temp (java.io.tmpdir)
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.PlatformDependent bitMode0
+详细: -Dio.netty.bitMode: 64 (sun.arch.data.model)
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.PlatformDependent isWindows0
+详细: Platform: Windows
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.PlatformDependent <clinit>
+详细: -Dio.netty.maxDirectMemory: -1 bytes
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.PlatformDependent <clinit>
+详细: -Dio.netty.uninitializedArrayAllocationThreshold: -1
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.CleanerJava9 <clinit>
+详细: java.nio.ByteBuffer.cleaner(): available
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.PlatformDependent <clinit>
+详细: -Dio.netty.noPreferDirect: false
+10月 17, 2026 9:27:14 下午 io.netty.channel.nio.NioEventLoop <clinit>
+详细: -Dio.netty.noKeySetOptimization: false
+10月 17, 2026 9:27:14 下午 io.netty.channel.nio.NioEventLoop <clinit>
+详细: -Dio.netty.selectorAutoRebuildThreshold: 512
+10月 17, 2026 9:27:14 下午 io.netty.util.internal.PlatformDependent$Mpsc <clinit>
+详细: org.jctools-core.MpscChunkedArrayQueue: available
+10月 17, 2026 9:27:14 下午 io.netty.channel.DefaultChannelId <clinit>
+详细: -Dio.netty.processId: 28876 (auto-detected)
+10月 17, 2026 9:27:14 下午 io.netty.util.NetUtil <clinit>
+详细: -Djava.net.preferIPv4Stack: false
+10月 17, 2026 9:27:14 下午 io.netty.util.NetUtil <clinit>
+详细: -Djava.net.preferIPv6Addresses: false
+10月 17, 2026 9:27:14 下午 io.netty.util.NetUtilInitializations determineLoopback
+详细: Loopback interface: lo (Software Loopback Interface 1, 127.0.0.1)
+10月 17, 2026 9:27:14 下午 io.netty.util.NetUtil$SoMaxConnAction run
+详细: Failed to get SOMAXCONN from sysctl and file \proc\sys\net\core\somaxconn. Default: 200
+10月 17, 2026 9:27:14 下午 io.netty.channel.DefaultChannelId <clinit>
+详细: -Dio.netty.machineId: 00:50:56:ff:fe:c0:00:08 (auto-detected)
+10月 17, 2026 9:27:14 下午 io.netty.util.ResourceLeakDetector <clinit>
+详细: -Dio.netty.leakDetection.level: paranoid
+10月 17, 2026 9:27:14 下午 io.netty.util.ResourceLeakDetector <clinit>
+详细: -Dio.netty.leakDetection.targetRecords: 4
+10月 17, 2026 9:27:14 下午 io.netty.buffer.PooledByteBufAllocator <clinit>
+详细: -Dio.netty.allocator.numHeapArenas: 64
+10月 17, 2026 9:27:14 下午 io.netty.buffer.PooledByteBufAllocator <clinit>
+详细: -Dio.netty.allocator.numDirectArenas: 64
+10月 17, 2026 9:27:14 下午 io.netty.buffer.PooledByteBufAllocator <clinit>
+详细: -Dio.netty.allocator.pageSize: 8192
+10月 17, 2026 9:27:14 下午 io.netty.buffer.PooledByteBufAllocator <clinit>
+详细: -Dio.netty.allocator.maxOrder: 9
+10月 17, 2026 9:27:14 下午 io.netty.buffer.PooledByteBufAllocator <clinit>
+详细: -Dio.netty.allocator.chunkSize: 4194304
+10月 17, 2026 9:27:14 下午 io.netty.buffer.PooledByteBufAllocator <clinit>
+详细: -Dio.netty.allocator.smallCacheSize: 256
+10月 17, 2026 9:27:14 下午 io.netty.buffer.PooledByteBufAllocator <clinit>
+详细: -Dio.netty.allocator.normalCacheSize: 64
+10月 17, 2026 9:27:14 下午 io.netty.buffer.PooledByteBufAllocator <clinit>
+详细: -Dio.netty.allocator.maxCachedBufferCapacity: 32768
+10月 17, 2026 9:27:14 下午 io.netty.buffer.PooledByteBufAllocator <clinit>
+详细: -Dio.netty.allocator.cacheTrimInterval: 8192
+10月 17, 2026 9:27:14 下午 io.netty.buffer.PooledByteBufAllocator <clinit>
+详细: -Dio.netty.allocator.cacheTrimIntervalMillis: 0
+10月 17, 2026 9:27:14 下午 io.netty.buffer.PooledByteBufAllocator <clinit>
+详细: -Dio.netty.allocator.useCacheForAllThreads: false
+10月 17, 2026 9:27:14 下午 io.netty.buffer.PooledByteBufAllocator <clinit>
+详细: -Dio.netty.allocator.maxCachedByteBuffersPerChunk: 1023
+10月 17, 2026 9:27:14 下午 io.netty.buffer.ByteBufUtil <clinit>
+详细: -Dio.netty.allocator.type: pooled
+10月 17, 2026 9:27:14 下午 io.netty.buffer.ByteBufUtil <clinit>
+详细: -Dio.netty.threadLocalDirectBufferSize: 0
+10月 17, 2026 9:27:14 下午 io.netty.buffer.ByteBufUtil <clinit>
+详细: -Dio.netty.maxThreadLocalCharBufferSize: 16384
+10月 17, 2026 9:27:14 下午 io.netty.util.Recycler <clinit>
+详细: -Dio.netty.recycler.maxCapacityPerThread: 4096
+10月 17, 2026 9:27:14 下午 io.netty.util.Recycler <clinit>
+详细: -Dio.netty.recycler.ratio: 8
+10月 17, 2026 9:27:14 下午 io.netty.util.Recycler <clinit>
+详细: -Dio.netty.recycler.chunkSize: 32
+10月 17, 2026 9:27:14 下午 io.netty.util.Recycler <clinit>
+详细: -Dio.netty.recycler.blocking: false
+10月 17, 2026 9:27:14 下午 io.netty.util.Recycler <clinit>
+详细: -Dio.netty.recycler.batchFastThreadLocalOnly: true
+10月 17, 2026 9:27:14 下午 io.netty.buffer.AbstractByteBuf <clinit>
+详细: -Dio.netty.buffer.checkAccessible: true
+10月 17, 2026 9:27:14 下午 io.netty.buffer.AbstractByteBuf <clinit>
+详细: -Dio.netty.buffer.checkBounds: true
+10月 17, 2026 9:27:14 下午 io.netty.util.ResourceLeakDetectorFactory$DefaultResourceLeakDetectorFactory newResourceLeakDetector
+详细: Loaded default ResourceLeakDetector: io.netty.util.ResourceLeakDetector@da1d14f
+10月 17, 2026 9:27:14 下午 io.netty.buffer.AdvancedLeakAwareByteBuf <clinit>
+详细: -Dio.netty.leakDetection.acquireAndReleaseOnly: false
+10月 17, 2026 9:27:14 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-2-1
+10月 17, 2026 9:27:14 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-3-1
+10月 17, 2026 9:27:14 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-4-1
+10月 17, 2026 9:27:14 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-5-1
+10月 17, 2026 9:27:14 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-6-1
+10月 17, 2026 9:27:14 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62166
+10月 17, 2026 9:27:19 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 5 thread-local buffer(s) from thread: nioEventLoopGroup-7-1
+10月 17, 2026 9:27:19 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62168
+10月 17, 2026 9:27:20 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 7 thread-local buffer(s) from thread: nioEventLoopGroup-8-1
+10月 17, 2026 9:27:20 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62166
+10月 17, 2026 9:27:20 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #1 in 106ms (not leader (no hint), re-bootstrapping)
+10月 17, 2026 9:27:20 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-9-1
+10月 17, 2026 9:27:21 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62168
+10月 17, 2026 9:27:31 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 15 thread-local buffer(s) from thread: nioEventLoopGroup-10-1
+[MATRIX] | partition-bilateral@storm | 0 | 0ms | 0 | 0 |  | (acked=50, consumed=50)
+10月 17, 2026 9:27:33 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-11-1
+10月 17, 2026 9:27:33 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-12-1
+10月 17, 2026 9:27:34 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-13-1
+10月 17, 2026 9:27:34 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-14-1
+10月 17, 2026 9:27:35 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-15-1
+10月 17, 2026 9:27:35 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-16-1
+10月 17, 2026 9:27:35 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-17-1
+10月 17, 2026 9:27:35 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-18-1
+10月 17, 2026 9:27:35 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-19-1
+10月 17, 2026 9:27:35 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-20-1
+10月 17, 2026 9:27:35 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62202
+10月 17, 2026 9:27:41 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 10 thread-local buffer(s) from thread: nioEventLoopGroup-21-1
+10月 17, 2026 9:27:41 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62202
+[MATRIX] | kill9-follower@flush-window | 0 | 0ms | 0 | 0 |  | (acked=51, consumed=51)
+10月 17, 2026 9:27:51 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 15 thread-local buffer(s) from thread: nioEventLoopGroup-22-1
+10月 17, 2026 9:27:53 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-23-1
+10月 17, 2026 9:27:53 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-24-1
+10月 17, 2026 9:27:53 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-25-1
+10月 17, 2026 9:27:53 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-26-1
+10月 17, 2026 9:27:53 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-27-1
+10月 17, 2026 9:27:53 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-28-1
+10月 17, 2026 9:27:53 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-29-1
+10月 17, 2026 9:27:53 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-30-1
+10月 17, 2026 9:27:53 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-31-1
+10月 17, 2026 9:27:53 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-32-1
+10月 17, 2026 9:27:53 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62438
+10月 17, 2026 9:27:53 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #1 in 112ms (not leader, following hint 127.0.0.1:62440)
+10月 17, 2026 9:27:53 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-33-1
+10月 17, 2026 9:27:53 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to 127.0.0.1/<unresolved>:62440
+10月 17, 2026 9:27:54 下午 com.minimq.client.ClientChannel$ResponseHandler exceptionCaught
+警告: channel error, closing
+java.net.SocketException: Connection reset
+	at java.base/sun.nio.ch.SocketChannelImpl.throwConnectionReset(SocketChannelImpl.java:394)
+	at java.base/sun.nio.ch.SocketChannelImpl.read(SocketChannelImpl.java:426)
+	at io.netty.buffer.PooledByteBuf.setBytes(PooledByteBuf.java:254)
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:1132)
+	at io.netty.buffer.WrappedByteBuf.writeBytes(WrappedByteBuf.java:821)
+	at io.netty.buffer.AdvancedLeakAwareByteBuf.writeBytes(AdvancedLeakAwareByteBuf.java:636)
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:357)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:151)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+10月 17, 2026 9:27:54 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #1 in 137ms (node none failed: io.netty.channel.StacklessClosedChannelException)
+10月 17, 2026 9:27:54 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 5 thread-local buffer(s) from thread: nioEventLoopGroup-34-1
+10月 17, 2026 9:27:54 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:62440 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62440
+10月 17, 2026 9:27:54 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62440 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62440
+10月 17, 2026 9:27:54 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62442
+10月 17, 2026 9:27:54 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #2 in 203ms (not leader, following hint 127.0.0.1:62440)
+10月 17, 2026 9:27:54 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-37-1
+10月 17, 2026 9:27:54 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:62440 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62440
+10月 17, 2026 9:27:54 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62438 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62438
+10月 17, 2026 9:27:54 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62440 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62440
+10月 17, 2026 9:27:54 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62442
+10月 17, 2026 9:27:54 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #3 in 325ms (not leader, following hint 127.0.0.1:62440)
+10月 17, 2026 9:27:54 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-41-1
+10月 17, 2026 9:27:55 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:62440 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62440
+10月 17, 2026 9:27:55 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62438 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62438
+10月 17, 2026 9:27:55 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62440 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62440
+10月 17, 2026 9:27:55 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62442
+10月 17, 2026 9:27:55 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #4 in 416ms (not leader, following hint 127.0.0.1:62440)
+10月 17, 2026 9:27:55 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-45-1
+10月 17, 2026 9:27:55 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:62440 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62440
+10月 17, 2026 9:27:55 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62438 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62438
+10月 17, 2026 9:27:55 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62440 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62440
+10月 17, 2026 9:27:55 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62442
+10月 17, 2026 9:27:55 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #5 in 528ms (not leader, following hint 127.0.0.1:62440)
+10月 17, 2026 9:27:55 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-49-1
+10月 17, 2026 9:27:56 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:62440 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62440
+10月 17, 2026 9:27:56 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62438
+10月 17, 2026 9:27:56 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #6 in 521ms (not leader (no hint), re-bootstrapping)
+10月 17, 2026 9:27:56 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-51-1
+10月 17, 2026 9:27:56 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62440 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62440
+10月 17, 2026 9:27:56 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62442
+10月 17, 2026 9:27:56 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #7 in 516ms (not leader, following hint 127.0.0.1:62440)
+10月 17, 2026 9:27:56 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-53-1
+10月 17, 2026 9:27:57 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:62440 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62440
+10月 17, 2026 9:27:57 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62438
+10月 17, 2026 9:28:01 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 7 thread-local buffer(s) from thread: nioEventLoopGroup-55-1
+10月 17, 2026 9:28:01 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62438
+[MATRIX] | kill9-leader@election | 0 | 0ms | 0 | 0 |  | (acked=47, consumed=47)
+10月 17, 2026 9:28:11 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 15 thread-local buffer(s) from thread: nioEventLoopGroup-56-1
+10月 17, 2026 9:28:11 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-57-1
+10月 17, 2026 9:28:12 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-58-1
+10月 17, 2026 9:28:12 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-59-1
+10月 17, 2026 9:28:13 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-60-1
+10月 17, 2026 9:28:13 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-61-1
+10月 17, 2026 9:28:13 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-62-1
+10月 17, 2026 9:28:13 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62694
+10月 17, 2026 9:28:13 下午 com.minimq.client.ClientChannel$ResponseHandler exceptionCaught
+警告: channel error, closing
+java.net.SocketException: Connection reset
+	at java.base/sun.nio.ch.SocketChannelImpl.throwConnectionReset(SocketChannelImpl.java:394)
+	at java.base/sun.nio.ch.SocketChannelImpl.read(SocketChannelImpl.java:426)
+	at io.netty.buffer.PooledByteBuf.setBytes(PooledByteBuf.java:254)
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:1132)
+	at io.netty.buffer.WrappedByteBuf.writeBytes(WrappedByteBuf.java:821)
+	at io.netty.buffer.AdvancedLeakAwareByteBuf.writeBytes(AdvancedLeakAwareByteBuf.java:636)
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:357)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:151)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+10月 17, 2026 9:28:13 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #1 in 112ms (node none failed: io.netty.channel.StacklessClosedChannelException)
+10月 17, 2026 9:28:13 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 5 thread-local buffer(s) from thread: nioEventLoopGroup-63-1
+10月 17, 2026 9:28:13 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62696
+10月 17, 2026 9:28:13 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #2 in 200ms (not leader, following hint 127.0.0.1:62694)
+10月 17, 2026 9:28:13 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-64-1
+10月 17, 2026 9:28:14 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:62694 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62694
+10月 17, 2026 9:28:14 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62698
+10月 17, 2026 9:28:14 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #3 in 300ms (not leader, following hint 127.0.0.1:62694)
+10月 17, 2026 9:28:14 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-66-1
+10月 17, 2026 9:28:14 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:62694 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62694
+10月 17, 2026 9:28:14 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62694 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62694
+10月 17, 2026 9:28:14 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62696
+10月 17, 2026 9:28:14 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #4 in 416ms (not leader, following hint 127.0.0.1:62694)
+10月 17, 2026 9:28:14 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-69-1
+10月 17, 2026 9:28:14 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:62694 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62694
+10月 17, 2026 9:28:14 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62698
+10月 17, 2026 9:28:14 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #5 in 505ms (not leader, following hint 127.0.0.1:62694)
+10月 17, 2026 9:28:14 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-71-1
+10月 17, 2026 9:28:15 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-72-1
+10月 17, 2026 9:28:15 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:62694 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62694
+10月 17, 2026 9:28:15 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62694 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62694
+10月 17, 2026 9:28:15 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62696
+10月 17, 2026 9:28:20 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 10 thread-local buffer(s) from thread: nioEventLoopGroup-75-1
+10月 17, 2026 9:28:20 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62694
+10月 17, 2026 9:28:20 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #1 in 125ms (not leader, following hint 127.0.0.1:62696)
+10月 17, 2026 9:28:20 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-76-1
+10月 17, 2026 9:28:20 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to 127.0.0.1/<unresolved>:62696
+[MATRIX] | stale-leader-revival@serving | 0 | 0ms | 0 | 0 |  | (acked=68, consumed=68)
+10月 17, 2026 9:28:30 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 19 thread-local buffer(s) from thread: nioEventLoopGroup-77-1
+10月 17, 2026 9:28:30 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-78-1
+10月 17, 2026 9:28:30 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-79-1
+10月 17, 2026 9:28:31 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-80-1
+10月 17, 2026 9:28:32 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-81-1
+10月 17, 2026 9:28:32 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-82-1
+10月 17, 2026 9:28:32 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-83-1
+10月 17, 2026 9:28:32 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-84-1
+10月 17, 2026 9:28:32 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-85-1
+10月 17, 2026 9:28:32 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-86-1
+10月 17, 2026 9:28:32 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-87-1
+10月 17, 2026 9:28:32 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-88-1
+10月 17, 2026 9:28:32 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-89-1
+10月 17, 2026 9:28:32 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-90-1
+10月 17, 2026 9:28:32 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-91-1
+10月 17, 2026 9:28:33 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-92-1
+10月 17, 2026 9:28:33 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-93-1
+10月 17, 2026 9:28:33 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:37 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 6 thread-local buffer(s) from thread: nioEventLoopGroup-94-1
+10月 17, 2026 9:28:37 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:37 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:37 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:37 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-97-1
+10月 17, 2026 9:28:37 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:37 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:37 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:37 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-100-1
+10月 17, 2026 9:28:37 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:37 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:37 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:37 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-103-1
+10月 17, 2026 9:28:38 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:38 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:38 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:38 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-106-1
+10月 17, 2026 9:28:38 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:38 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:38 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:38 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-109-1
+10月 17, 2026 9:28:38 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:38 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:38 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:38 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-112-1
+10月 17, 2026 9:28:39 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:39 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:39 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:39 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-115-1
+10月 17, 2026 9:28:39 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:39 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:39 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:39 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-118-1
+10月 17, 2026 9:28:39 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:39 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:39 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:39 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-121-1
+10月 17, 2026 9:28:40 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:40 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:40 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:40 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-124-1
+10月 17, 2026 9:28:40 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:40 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:40 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:40 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-127-1
+10月 17, 2026 9:28:40 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:40 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:40 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:40 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-130-1
+10月 17, 2026 9:28:40 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:40 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:40 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:40 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-133-1
+10月 17, 2026 9:28:40 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:40 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:40 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:40 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-136-1
+10月 17, 2026 9:28:41 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:41 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:41 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:41 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-139-1
+10月 17, 2026 9:28:41 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:41 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:41 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:41 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-142-1
+10月 17, 2026 9:28:42 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:42 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:42 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:42 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-145-1
+10月 17, 2026 9:28:42 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:42 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:42 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:42 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-148-1
+10月 17, 2026 9:28:42 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:42 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:42 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:42 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-151-1
+10月 17, 2026 9:28:42 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:42 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:42 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:42 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-154-1
+10月 17, 2026 9:28:42 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:42 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:42 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:42 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-157-1
+10月 17, 2026 9:28:43 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:43 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:43 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:43 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-160-1
+10月 17, 2026 9:28:43 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:43 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:43 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:43 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-163-1
+10月 17, 2026 9:28:43 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:43 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:43 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:43 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-166-1
+10月 17, 2026 9:28:43 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:43 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:43 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:43 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-169-1
+10月 17, 2026 9:28:44 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:44 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:44 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:44 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-172-1
+10月 17, 2026 9:28:44 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:44 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:44 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:44 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-175-1
+10月 17, 2026 9:28:44 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:44 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:44 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:44 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-178-1
+10月 17, 2026 9:28:45 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:45 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:45 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:45 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-181-1
+10月 17, 2026 9:28:45 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:45 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:45 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:45 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-184-1
+10月 17, 2026 9:28:45 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:45 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:45 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:45 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-187-1
+10月 17, 2026 9:28:45 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:45 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:45 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:45 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-190-1
+10月 17, 2026 9:28:46 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:46 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:46 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:46 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-193-1
+10月 17, 2026 9:28:46 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:46 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:46 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:46 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-196-1
+10月 17, 2026 9:28:47 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:47 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:47 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:47 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-199-1
+10月 17, 2026 9:28:47 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:47 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:47 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:47 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-202-1
+10月 17, 2026 9:28:47 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:47 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:47 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:47 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-205-1
+10月 17, 2026 9:28:47 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:47 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:47 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:47 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-208-1
+10月 17, 2026 9:28:47 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:47 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:47 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:47 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-211-1
+10月 17, 2026 9:28:48 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:48 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:48 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:48 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-214-1
+10月 17, 2026 9:28:48 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:48 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:48 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:48 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-217-1
+10月 17, 2026 9:28:48 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:48 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:48 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:48 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-220-1
+10月 17, 2026 9:28:48 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:48 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:48 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:48 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-223-1
+10月 17, 2026 9:28:49 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:49 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:49 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:49 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-226-1
+10月 17, 2026 9:28:49 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:49 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:49 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:49 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-229-1
+10月 17, 2026 9:28:49 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:49 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:49 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:49 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-232-1
+10月 17, 2026 9:28:50 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:50 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:50 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:50 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-235-1
+10月 17, 2026 9:28:50 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:50 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:50 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:50 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-238-1
+10月 17, 2026 9:28:50 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:50 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:50 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:50 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-241-1
+10月 17, 2026 9:28:50 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:50 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:50 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:50 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-244-1
+10月 17, 2026 9:28:50 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:50 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:50 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:50 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-247-1
+10月 17, 2026 9:28:51 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:51 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:51 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:51 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-250-1
+10月 17, 2026 9:28:51 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:51 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:51 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:51 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-253-1
+10月 17, 2026 9:28:51 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:51 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:51 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:51 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-256-1
+10月 17, 2026 9:28:51 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:51 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:51 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:51 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-259-1
+10月 17, 2026 9:28:52 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:52 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:52 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:52 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-262-1
+10月 17, 2026 9:28:52 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:52 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:52 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:52 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-265-1
+10月 17, 2026 9:28:52 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:52 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:52 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:52 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-268-1
+10月 17, 2026 9:28:53 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:53 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:53 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:53 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-271-1
+10月 17, 2026 9:28:53 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:53 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:53 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:53 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-274-1
+10月 17, 2026 9:28:53 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:53 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:53 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:53 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-277-1
+10月 17, 2026 9:28:53 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:53 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:53 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:53 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-280-1
+10月 17, 2026 9:28:54 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:54 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:54 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:54 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-283-1
+10月 17, 2026 9:28:54 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:54 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:54 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:54 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-286-1
+10月 17, 2026 9:28:55 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:55 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:55 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:55 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-289-1
+10月 17, 2026 9:28:55 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:55 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:55 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:55 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-292-1
+10月 17, 2026 9:28:55 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:55 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:55 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:55 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-295-1
+10月 17, 2026 9:28:55 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:55 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:55 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:55 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-298-1
+10月 17, 2026 9:28:55 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:55 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:55 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:55 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-301-1
+10月 17, 2026 9:28:56 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:56 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:56 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:56 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-304-1
+10月 17, 2026 9:28:56 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62757 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62757
+10月 17, 2026 9:28:56 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:62759 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:62759
+10月 17, 2026 9:28:56 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+10月 17, 2026 9:28:56 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-307-1
+10月 17, 2026 9:28:57 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62757
+10月 17, 2026 9:28:57 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #1 in 126ms (not leader, following hint 127.0.0.1:62755)
+10月 17, 2026 9:28:57 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-308-1
+10月 17, 2026 9:28:57 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to 127.0.0.1/<unresolved>:62755
+10月 17, 2026 9:28:57 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:62755
+[MATRIX] | isr-shrink(loud-error) | 0 | 0ms | 0 | 0 |  | (acked=40, consumed=41)
+[MATRIX] isr-shrink unavailable span: 18302ms (recorded honestly)
+10月 17, 2026 9:29:08 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 15 thread-local buffer(s) from thread: nioEventLoopGroup-310-1
+10月 17, 2026 9:29:08 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 5 thread-local buffer(s) from thread: nioEventLoopGroup-309-1
+10月 17, 2026 9:29:09 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-311-1
+10月 17, 2026 9:29:09 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-312-1
+10月 17, 2026 9:29:09 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-313-1
+10月 17, 2026 9:29:09 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-314-1
+10月 17, 2026 9:29:09 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-315-1
+10月 17, 2026 9:29:09 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-316-1
+10月 17, 2026 9:29:10 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-317-1
+10月 17, 2026 9:29:10 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-318-1
+10月 17, 2026 9:29:10 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-319-1
+10月 17, 2026 9:29:10 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-320-1
+10月 17, 2026 9:29:10 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-321-1
+10月 17, 2026 9:29:10 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-322-1
+10月 17, 2026 9:29:10 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-323-1
+10月 17, 2026 9:29:10 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:63775
+10月 17, 2026 9:29:10 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #1 in 116ms (not leader, following hint 127.0.0.1:63777)
+10月 17, 2026 9:29:10 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-324-1
+10月 17, 2026 9:29:10 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to 127.0.0.1/<unresolved>:63777
+10月 17, 2026 9:29:10 下午 com.minimq.client.ClientChannel$ResponseHandler exceptionCaught
+警告: channel error, closing
+java.net.SocketException: Connection reset
+	at java.base/sun.nio.ch.SocketChannelImpl.throwConnectionReset(SocketChannelImpl.java:394)
+	at java.base/sun.nio.ch.SocketChannelImpl.read(SocketChannelImpl.java:426)
+	at io.netty.buffer.PooledByteBuf.setBytes(PooledByteBuf.java:254)
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:1132)
+	at io.netty.buffer.WrappedByteBuf.writeBytes(WrappedByteBuf.java:821)
+	at io.netty.buffer.AdvancedLeakAwareByteBuf.writeBytes(AdvancedLeakAwareByteBuf.java:636)
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:357)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:151)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+10月 17, 2026 9:29:10 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #1 in 132ms (node none failed: java.io.IOException: connection closed)
+10月 17, 2026 9:29:10 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 5 thread-local buffer(s) from thread: nioEventLoopGroup-325-1
+10月 17, 2026 9:29:11 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:63777 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:63777
+10月 17, 2026 9:29:11 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:63777 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:63777
+10月 17, 2026 9:29:11 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:63779
+10月 17, 2026 9:29:11 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #2 in 245ms (not leader, following hint 127.0.0.1:63777)
+10月 17, 2026 9:29:11 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-328-1
+10月 17, 2026 9:29:11 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:63777 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:63777
+10月 17, 2026 9:29:11 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:63775
+10月 17, 2026 9:29:11 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #3 in 329ms (not leader, following hint 127.0.0.1:63777)
+10月 17, 2026 9:29:11 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-330-1
+10月 17, 2026 9:29:11 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:63777 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:63777
+10月 17, 2026 9:29:11 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:63777 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:63777
+10月 17, 2026 9:29:11 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:63779
+10月 17, 2026 9:29:11 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #4 in 442ms (not leader, following hint 127.0.0.1:63777)
+10月 17, 2026 9:29:11 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-333-1
+10月 17, 2026 9:29:12 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:63777 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:63777
+10月 17, 2026 9:29:12 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:63775
+10月 17, 2026 9:29:17 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 7 thread-local buffer(s) from thread: nioEventLoopGroup-335-1
+10月 17, 2026 9:29:17 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:63775
+[MATRIX] | kill9-leader@flush-window | 0 | 0ms | 1 | 0 |  | (acked=48, consumed=49)
+10月 17, 2026 9:29:27 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 15 thread-local buffer(s) from thread: nioEventLoopGroup-336-1
+10月 17, 2026 9:29:29 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-337-1
+10月 17, 2026 9:29:29 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-338-1
+10月 17, 2026 9:29:29 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-339-1
+10月 17, 2026 9:29:29 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-340-1
+10月 17, 2026 9:29:29 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-341-1
+10月 17, 2026 9:29:29 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64035
+10月 17, 2026 9:29:35 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 10 thread-local buffer(s) from thread: nioEventLoopGroup-342-1
+10月 17, 2026 9:29:35 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64035
+[MATRIX] | kill9-follower@storm | 0 | 0ms | 0 | 0 |  | (acked=50, consumed=50)
+10月 17, 2026 9:29:45 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 15 thread-local buffer(s) from thread: nioEventLoopGroup-343-1
+10月 17, 2026 9:29:45 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-344-1
+10月 17, 2026 9:29:47 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-345-1
+10月 17, 2026 9:29:47 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-346-1
+10月 17, 2026 9:29:47 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-347-1
+10月 17, 2026 9:29:47 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-348-1
+10月 17, 2026 9:29:47 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-349-1
+10月 17, 2026 9:29:47 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-350-1
+10月 17, 2026 9:29:47 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-351-1
+10月 17, 2026 9:29:47 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-352-1
+10月 17, 2026 9:29:47 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64283
+10月 17, 2026 9:29:52 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 6 thread-local buffer(s) from thread: nioEventLoopGroup-353-1
+10月 17, 2026 9:29:52 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64285
+10月 17, 2026 9:29:52 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #1 in 120ms (not leader, following hint 127.0.0.1:64287)
+10月 17, 2026 9:29:52 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-354-1
+10月 17, 2026 9:29:52 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to 127.0.0.1/<unresolved>:64287
+10月 17, 2026 9:29:56 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64283
+10月 17, 2026 9:29:56 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #1 in 141ms (not leader, following hint 127.0.0.1:64287)
+10月 17, 2026 9:29:56 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-356-1
+10月 17, 2026 9:29:56 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to 127.0.0.1/<unresolved>:64287
+[MATRIX] | minority-unavailability | 0 | 0ms | 0 | 0 |  | (acked=71, consumed=72)
+[MATRIX] minority-partition unavailability: 4720ms over 2 probes (prefer unavailability over a wrong write)
+10月 17, 2026 9:30:07 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 19 thread-local buffer(s) from thread: nioEventLoopGroup-357-1
+10月 17, 2026 9:30:07 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 10 thread-local buffer(s) from thread: nioEventLoopGroup-355-1
+10月 17, 2026 9:30:08 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-358-1
+10月 17, 2026 9:30:08 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-359-1
+10月 17, 2026 9:30:08 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-360-1
+10月 17, 2026 9:30:08 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-361-1
+10月 17, 2026 9:30:08 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-362-1
+10月 17, 2026 9:30:08 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-363-1
+10月 17, 2026 9:30:08 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-364-1
+10月 17, 2026 9:30:08 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-365-1
+10月 17, 2026 9:30:09 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64318
+10月 17, 2026 9:30:09 下午 com.minimq.client.ClientChannel$ResponseHandler exceptionCaught
+警告: channel error, closing
+java.net.SocketException: Connection reset
+	at java.base/sun.nio.ch.SocketChannelImpl.throwConnectionReset(SocketChannelImpl.java:394)
+	at java.base/sun.nio.ch.SocketChannelImpl.read(SocketChannelImpl.java:426)
+	at io.netty.buffer.PooledByteBuf.setBytes(PooledByteBuf.java:254)
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:1132)
+	at io.netty.buffer.WrappedByteBuf.writeBytes(WrappedByteBuf.java:821)
+	at io.netty.buffer.AdvancedLeakAwareByteBuf.writeBytes(AdvancedLeakAwareByteBuf.java:636)
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:357)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:151)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+10月 17, 2026 9:30:09 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #1 in 130ms (node none failed: io.netty.channel.StacklessClosedChannelException)
+10月 17, 2026 9:30:09 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 5 thread-local buffer(s) from thread: nioEventLoopGroup-366-1
+10月 17, 2026 9:30:09 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64320
+10月 17, 2026 9:30:09 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #2 in 217ms (not leader, following hint 127.0.0.1:64318)
+10月 17, 2026 9:30:09 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-367-1
+10月 17, 2026 9:30:09 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:64318 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64318
+10月 17, 2026 9:30:09 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64322
+10月 17, 2026 9:30:09 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #3 in 343ms (not leader, following hint 127.0.0.1:64318)
+10月 17, 2026 9:30:09 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-369-1
+10月 17, 2026 9:30:10 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:64318 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64318
+10月 17, 2026 9:30:10 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:64318 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64318
+10月 17, 2026 9:30:10 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64320
+10月 17, 2026 9:30:10 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #4 in 436ms (not leader, following hint 127.0.0.1:64318)
+10月 17, 2026 9:30:10 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-372-1
+10月 17, 2026 9:30:10 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:64318 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64318
+10月 17, 2026 9:30:10 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64322
+10月 17, 2026 9:30:10 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #5 in 537ms (not leader, following hint 127.0.0.1:64318)
+10月 17, 2026 9:30:10 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-374-1
+10月 17, 2026 9:30:11 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:64318 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64318
+10月 17, 2026 9:30:11 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:64318 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64318
+10月 17, 2026 9:30:11 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64320
+10月 17, 2026 9:30:11 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #6 in 509ms (not leader, following hint 127.0.0.1:64322)
+10月 17, 2026 9:30:11 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-377-1
+10月 17, 2026 9:30:11 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to 127.0.0.1/<unresolved>:64322
+10月 17, 2026 9:30:15 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 7 thread-local buffer(s) from thread: nioEventLoopGroup-378-1
+10月 17, 2026 9:30:15 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:64318 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64318
+10月 17, 2026 9:30:15 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64320
+10月 17, 2026 9:30:15 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #1 in 132ms (not leader, following hint 127.0.0.1:64322)
+10月 17, 2026 9:30:15 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-380-1
+10月 17, 2026 9:30:15 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to 127.0.0.1/<unresolved>:64322
+[MATRIX] | kill9-leader@storm | 0 | 0ms | 0 | 0 |  | (acked=51, consumed=51)
+10月 17, 2026 9:30:26 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 15 thread-local buffer(s) from thread: nioEventLoopGroup-381-1
+10月 17, 2026 9:30:26 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-382-1
+10月 17, 2026 9:30:26 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-383-1
+10月 17, 2026 9:30:27 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-384-1
+10月 17, 2026 9:30:27 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-385-1
+10月 17, 2026 9:30:27 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-386-1
+10月 17, 2026 9:30:27 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-387-1
+10月 17, 2026 9:30:27 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-388-1
+10月 17, 2026 9:30:27 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-389-1
+10月 17, 2026 9:30:27 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-390-1
+10月 17, 2026 9:30:27 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-391-1
+10月 17, 2026 9:30:27 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64563
+10月 17, 2026 9:30:38 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 15 thread-local buffer(s) from thread: nioEventLoopGroup-393-1
+10月 17, 2026 9:30:38 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-392-1
+10月 17, 2026 9:30:39 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-394-1
+10月 17, 2026 9:30:39 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-395-1
+10月 17, 2026 9:30:39 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-396-1
+10月 17, 2026 9:30:39 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-397-1
+10月 17, 2026 9:30:39 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-398-1
+10月 17, 2026 9:30:39 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-399-1
+10月 17, 2026 9:30:40 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-400-1
+10月 17, 2026 9:30:40 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-401-1
+10月 17, 2026 9:30:40 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-402-1
+10月 17, 2026 9:30:40 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-403-1
+10月 17, 2026 9:30:40 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-404-1
+10月 17, 2026 9:30:40 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-405-1
+10月 17, 2026 9:30:40 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-406-1
+10月 17, 2026 9:30:40 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64583
+10月 17, 2026 9:30:40 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #1 in 123ms (not leader, following hint 127.0.0.1:64585)
+10月 17, 2026 9:30:40 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-407-1
+10月 17, 2026 9:30:40 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to 127.0.0.1/<unresolved>:64585
+10月 17, 2026 9:30:46 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 9 thread-local buffer(s) from thread: nioEventLoopGroup-408-1
+10月 17, 2026 9:30:46 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64583
+10月 17, 2026 9:30:46 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #1 in 101ms (not leader, following hint 127.0.0.1:64585)
+10月 17, 2026 9:30:46 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-409-1
+10月 17, 2026 9:30:46 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to 127.0.0.1/<unresolved>:64585
+[MATRIX] | partition-unilateral@steady | 0 | 0ms | 0 | 0 |  | (acked=46, consumed=46)
+10月 17, 2026 9:30:56 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 15 thread-local buffer(s) from thread: nioEventLoopGroup-410-1
+10月 17, 2026 9:30:59 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-411-1
+10月 17, 2026 9:30:59 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-412-1
+10月 17, 2026 9:31:00 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-413-1
+10月 17, 2026 9:31:00 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-414-1
+10月 17, 2026 9:31:00 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-415-1
+10月 17, 2026 9:31:00 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-416-1
+10月 17, 2026 9:31:00 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-417-1
+10月 17, 2026 9:31:00 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64621
+10月 17, 2026 9:31:01 下午 com.minimq.client.ClientChannel$ResponseHandler exceptionCaught
+警告: channel error, closing
+java.net.SocketException: Connection reset
+	at java.base/sun.nio.ch.SocketChannelImpl.throwConnectionReset(SocketChannelImpl.java:394)
+	at java.base/sun.nio.ch.SocketChannelImpl.read(SocketChannelImpl.java:426)
+	at io.netty.buffer.PooledByteBuf.setBytes(PooledByteBuf.java:254)
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:1132)
+	at io.netty.buffer.WrappedByteBuf.writeBytes(WrappedByteBuf.java:821)
+	at io.netty.buffer.AdvancedLeakAwareByteBuf.writeBytes(AdvancedLeakAwareByteBuf.java:636)
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:357)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:151)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+10月 17, 2026 9:31:01 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #1 in 105ms (node none failed: io.netty.channel.StacklessClosedChannelException)
+10月 17, 2026 9:31:01 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 5 thread-local buffer(s) from thread: nioEventLoopGroup-418-1
+10月 17, 2026 9:31:01 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64623
+10月 17, 2026 9:31:01 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #2 in 220ms (not leader, following hint 127.0.0.1:64621)
+10月 17, 2026 9:31:01 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-419-1
+10月 17, 2026 9:31:01 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:64621 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64621
+10月 17, 2026 9:31:01 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64625
+10月 17, 2026 9:31:01 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #3 in 316ms (not leader, following hint 127.0.0.1:64621)
+10月 17, 2026 9:31:01 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-421-1
+10月 17, 2026 9:31:02 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:64621 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64621
+10月 17, 2026 9:31:02 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:64621 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64621
+10月 17, 2026 9:31:02 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64623
+10月 17, 2026 9:31:02 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #4 in 434ms (not leader, following hint 127.0.0.1:64621)
+10月 17, 2026 9:31:02 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-424-1
+10月 17, 2026 9:31:02 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:64621 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64621
+10月 17, 2026 9:31:02 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64625
+10月 17, 2026 9:31:02 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #5 in 500ms (not leader, following hint 127.0.0.1:64621)
+10月 17, 2026 9:31:02 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-426-1
+10月 17, 2026 9:31:03 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:64621 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64621
+10月 17, 2026 9:31:03 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:64621 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64621
+10月 17, 2026 9:31:03 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64623
+10月 17, 2026 9:31:03 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #6 in 501ms (not leader, following hint 127.0.0.1:64621)
+10月 17, 2026 9:31:03 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-429-1
+10月 17, 2026 9:31:03 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:64621 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64621
+10月 17, 2026 9:31:03 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64625
+10月 17, 2026 9:31:03 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #7 in 509ms (not leader, following hint 127.0.0.1:64621)
+10月 17, 2026 9:31:03 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-431-1
+10月 17, 2026 9:31:04 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:64621 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64621
+10月 17, 2026 9:31:04 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:64621 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64621
+10月 17, 2026 9:31:04 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64623
+10月 17, 2026 9:31:04 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #8 in 509ms (not leader, following hint 127.0.0.1:64621)
+10月 17, 2026 9:31:04 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-434-1
+10月 17, 2026 9:31:04 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:64621 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64621
+10月 17, 2026 9:31:04 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64625
+10月 17, 2026 9:31:04 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #9 in 516ms (not leader, following hint 127.0.0.1:64621)
+10月 17, 2026 9:31:04 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-436-1
+10月 17, 2026 9:31:05 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:64621 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64621
+10月 17, 2026 9:31:05 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:64621 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64621
+10月 17, 2026 9:31:05 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64623
+10月 17, 2026 9:31:05 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #10 in 527ms (not leader, following hint 127.0.0.1:64621)
+10月 17, 2026 9:31:05 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-439-1
+10月 17, 2026 9:31:05 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to 127.0.0.1/<unresolved>:64621 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64621
+10月 17, 2026 9:31:05 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64625
+10月 17, 2026 9:31:10 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 7 thread-local buffer(s) from thread: nioEventLoopGroup-441-1
+10月 17, 2026 9:31:10 下午 com.minimq.client.FailoverTransport tryConnect
+详细: connect to /127.0.0.1:64621 failed: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: no further information: /127.0.0.1:64621
+10月 17, 2026 9:31:10 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to /127.0.0.1:64623
+10月 17, 2026 9:31:10 下午 com.minimq.client.FailoverTransport retryOrFail
+详细: failover retry #1 in 112ms (not leader, following hint 127.0.0.1:64625)
+10月 17, 2026 9:31:10 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-443-1
+10月 17, 2026 9:31:10 下午 com.minimq.client.FailoverTransport adopt
+信息: failover transport connected to 127.0.0.1/<unresolved>:64625
+[MATRIX] | partition-bilateral@election | 0 | 0ms | 0 | 0 |  | (acked=51, consumed=52)
+10月 17, 2026 9:31:21 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 15 thread-local buffer(s) from thread: nioEventLoopGroup-444-1
+10月 17, 2026 9:31:21 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-445-1
+10月 17, 2026 9:31:21 下午 io.netty.buffer.PoolThreadCache free
+详细: Freed 2 thread-local buffer(s) from thread: nioEventLoopGroup-446-1
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 248.135 s - in com.minimq.client.chaos.ReliabilityMatrixTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time: 04:11 min
+[INFO] Finished at: 2026-10-17T21:31:21+08:00
+[INFO] ------------------------------------------------------------------------
+
+================================================================================
+2026-10-17 full-repo regression (mvn clean test, post M5 ISR fixes) - SUMMARY
+BUILD SUCCESS | 209 tests, 0 failures, 0 errors (storage 15 / protocol 43 /
+replica 38 / broker 45 / client 68)
+[MATRIX] | partition-bilateral@storm | 0 | 0ms | 1 | 0 |  | (acked=51, consumed=52)
+[MATRIX] | kill9-follower@flush-window | 0 | 0ms | 0 | 0 |  | (acked=54, consumed=54)
+[MATRIX] | kill9-leader@election | 0 | 0ms | 0 | 0 |  | (acked=46, consumed=46)
+[MATRIX] | stale-leader-revival@serving | 0 | 0ms | 0 | 0 |  | (acked=65, consumed=65)
+[MATRIX] | isr-shrink(loud-error) | 0 | 0ms | 0 | 0 |  | (acked=38, consumed=39)
+[MATRIX] isr-shrink unavailable span: 23671ms (recorded honestly)
+[MATRIX] | kill9-leader@flush-window | 0 | 0ms | 0 | 0 |  | (acked=46, consumed=46)
+[MATRIX] | kill9-follower@storm | 0 | 0ms | 0 | 0 |  | (acked=51, consumed=51)
+[MATRIX] | minority-unavailability | 0 | 0ms | 0 | 0 |  | (acked=71, consumed=72)
+[MATRIX] minority-partition unavailability: 4423ms over 2 probes (prefer unavailability over a wrong write)
+[MATRIX] | kill9-leader@storm | 0 | 0ms | 0 | 0 |  | (acked=50, consumed=50)
+[MATRIX] | partition-unilateral@steady | 0 | 0ms | 0 | 0 |  | (acked=50, consumed=50)
+[MATRIX] | partition-bilateral@election | 0 | 0ms | 0 | 0 |  | (acked=51, consumed=52)
+================================================================================
