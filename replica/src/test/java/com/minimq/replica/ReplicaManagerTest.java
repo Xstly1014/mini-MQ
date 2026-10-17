@@ -183,6 +183,44 @@ class ReplicaManagerTest {
         }
     }
 
+    /**
+     * The sustained-load race: a fetch is a round trip behind the LIVE end
+     * (producers append while it is in flight), so a live-LEO comparison
+     * never fires and a perfectly healthy follower gets evicted. Caught-up
+     * must be judged against the ARRIVAL-time snapshot, and a miss must
+     * FREEZE that snapshot as the bar so the next round can reach it.
+     */
+    @Test
+    void healthyFollowerKeepsPaceUnderSustainedAppends() throws Exception {
+        ReplicaManager leader = threeNodeLeader(0);
+        try {
+            // Sustained load for longer than the lag window: producers
+            // append +200 per round, node-1 fetches +150 per round — always
+            // behind the LIVE end (old code: never caught up), but it
+            // consumes each frozen arrival snapshot within one extra round
+            // (new code: caught up every other round).
+            long deadline = System.currentTimeMillis() + LAG_MAX_MS + 60;
+            long leo = 0;
+            while (System.currentTimeMillis() < deadline) {
+                logEnd.addAndGet(200);
+                leo += 150;
+                leader.onFollowerFetch(1, leo, logEnd.get());
+                Thread.sleep(5);
+            }
+            leader.sweep();
+            assertTrue(leader.isr().contains(1), "in-pace follower survives the sweep");
+            assertTrue(leader.acksAllAdmissible(), "full ISR keeps acks=all admissible");
+
+            // node-2 stayed silent through all of it — the sweep must still
+            // do its one real job: evict the dead weight, un-pin the HW
+            assertFalse(leader.isr().contains(2), "silent follower still evicted");
+            assertTrue(leader.highWatermark() >= leo,
+                    "HW unstuck: follows the pace-proving follower");
+        } finally {
+            leader.becomeFollower();
+        }
+    }
+
     /** Deposed leader releases parked producers with a failure, not a hang. */
     @Test
     void stepDownReleasesParkedProducers() throws Exception {

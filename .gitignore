@@ -1,6 +1,7 @@
 # build
 target/
 *.class
+.m2repo/
 
 # ide
 .idea/

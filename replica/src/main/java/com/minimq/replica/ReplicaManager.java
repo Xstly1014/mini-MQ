@@ -17,20 +17,23 @@ import java.util.logging.Logger;
  *
  * <h3>The three numbers that make replication safe</h3>
  * <ul>
- *   <li><b>LEO</b> — each replica's log end. Followers report theirs with
- *   every FOLLOWER_FETCH; the leader's own comes from the {@link LongSupplier}
- *   (the live {@code commitLog::maxOffset}).</li>
- *   <li><b>ISR</b> — the trusted-substitute list. Membership is judged by
- *   TIME, not by lagging byte counts (Kafka's post-0.10 rule): a follower
- *   that has caught up to the leader's LEO at least once within
- *   {@code lagMaxMs} is in. Byte-count judgment would evict healthy
- *   followers during traffic spikes — the exact bug class Kafka moved away
- *   from, kept here as a config knob and a story.</li>
- *   <li><b>HW</b> — min(LEO) over the ISR (leader included). Consumers only
- *   see records below it; acks=all producers only wake when it passes their
- *   batch. Shrink-before-stall is the load-bearing detail: a dead follower
- *   left in the ISR pins min(LEO) forever — the classic HW deadlock — so
- *   the sweep timer is not optional decoration.</li>
+ * <li><b>LEO</b> — each replica's log end. Followers report theirs with
+ * every FOLLOWER_FETCH; the leader's own comes from the {@link LongSupplier}
+ * (the live {@code commitLog::maxOffset}).</li>
+ * <li><b>ISR</b> — the trusted-substitute list. Membership is judged by
+ * TIME, not by lagging byte counts (Kafka's post-0.10 rule): a follower
+ * that has caught up to the leader's LEO at least once within
+ * {@code lagMaxMs} is in. Byte-count judgment would evict healthy
+ * followers during traffic spikes — the exact bug class Kafka moved away
+ * from, kept here as a config knob and a story. The catch-up bar itself
+ * is an ARRIVAL-TIME LEO snapshot (see
+ * {@link #onFollowerFetch(int, long, long)}), frozen on a miss so a
+ * round-trip lag can never masquerade as a slow follower.</li>
+ * <li><b>HW</b> — min(LEO) over the ISR (leader included). Consumers only
+ * see records below it; acks=all producers only wake when it passes their
+ * batch. Shrink-before-stall is the load-bearing detail: a dead follower
+ * left in the ISR pins min(LEO) forever — the classic HW deadlock — so
+ * the sweep timer is not optional decoration.</li>
  * </ul>
  *
  * <h3>acks=all is "all of the ISR", never "all replicas"</h3>
@@ -54,10 +57,20 @@ public final class ReplicaManager {
         final int id;
         /** Last LEO the follower reported (== its next fetch offset). */
         long leo;
-        /** When this follower last fetched at/behind the then-leader LEO — the catch-up clock. */
+        /**
+         * When this follower last fetched at/behind the then-leader LEO — the catch-up
+         * clock.
+         */
         long lastCaughtUpMs;
         /** Last time any fetch arrived (liveness, distinct from catching up). */
         long lastFetchMs;
+        /**
+         * The FROZEN arrival-time LEO snapshot this follower must consume to
+         * prove pace (0 = none pending). Set on a miss, cleared on the catch
+         * — the bar never moves mid-proof, so one round trip is always
+         * enough to reach it.
+         */
+        long pendingTarget;
 
         FollowerState(int id, long nowMs, long presumedLeo) {
             this.id = id;
@@ -78,7 +91,10 @@ public final class ReplicaManager {
 
     private boolean leader;
     private long highWatermark;
-    /** Observed-on-follower HW mirror (monitoring; followers record what leaders sent). */
+    /**
+     * Observed-on-follower HW mirror (monitoring; followers record what leaders
+     * sent).
+     */
     private final AtomicLong followerViewHw = new AtomicLong(-1);
 
     /** Monotonic HW-change counter (tests/monitoring: "did it move?"). */
@@ -114,7 +130,9 @@ public final class ReplicaManager {
     // role transitions (wiring calls these from the RaftNode listener)
     // ------------------------------------------------------------------
 
-    /** Election won: everyone is presumed in-sync until the clock says otherwise. */
+    /**
+     * Election won: everyone is presumed in-sync until the clock says otherwise.
+     */
     public void becomeLeader() {
         synchronized (lock) {
             leader = true;
@@ -151,9 +169,23 @@ public final class ReplicaManager {
      * A follower fetched: record its position and liveness, possibly widen
      * the ISR, recompute the HW, wake acks=all waiters the new HW covers.
      *
+     * <p>
+     * Caught-up is judged against {@code logEndAtArrival} — the leader's LEO
+     * captured when the fetch was SERVED, not the live LEO. The live end
+     * races ahead with every in-flight append, so a live-LEO comparison
+     * never fires under sustained load (the fetch is always a round trip
+     * behind) and healthy followers get evicted after {@code lagMaxMs}. The
+     * arrival snapshot is the honest bar: "everything that existed when you
+     * asked". A miss FREEZES that bar as the follower's pending target —
+     * reaching it in a later round still proves pace, which is exactly
+     * Kafka's time-based semantics ("caught up to the leader's LEO at some
+     * point within the lag window").
+     *
+     * @param logEndAtArrival
+     *                        the leader LEO captured at fetch-serve start
      * @return the current high watermark (rides back in the FETCH_RESP)
      */
-    public long onFollowerFetch(int followerId, long fetchOffset) {
+    public long onFollowerFetch(int followerId, long fetchOffset, long logEndAtArrival) {
         synchronized (lock) {
             if (!leader) {
                 return 0L;
@@ -165,15 +197,31 @@ public final class ReplicaManager {
             }
             f.lastFetchMs = now;
             f.leo = fetchOffset;
-            if (fetchOffset >= logEnd.getAsLong()) {
-                f.lastCaughtUpMs = now; // caught up to the leader AS IT IS NOW
+            if (fetchOffset >= logEndAtArrival
+                    || (f.pendingTarget > 0 && fetchOffset >= f.pendingTarget)) {
+                f.lastCaughtUpMs = now; // consumed everything the leader had at some instant
+                f.pendingTarget = 0L;
                 if (!isr.contains(followerId)) {
                     isr.add(followerId); // re-admission: it proved currency
                 }
+            } else if (f.pendingTarget == 0) {
+                // freeze today's bar; a mid-proof arrival snapshot must not
+                // move it, or a one-round catch could never happen
+                f.pendingTarget = logEndAtArrival;
             }
             advanceHwLocked();
             return highWatermark;
         }
+    }
+
+    /**
+     * Convenience overload for tests and callers without a captured
+     * snapshot: judges against the LIVE leader LEO (racy under sustained
+     * load — production code passes the arrival snapshot, see
+     * {@link #onFollowerFetch(int, long, long)}).
+     */
+    public long onFollowerFetch(int followerId, long fetchOffset) {
+        return onFollowerFetch(followerId, fetchOffset, logEnd.getAsLong());
     }
 
     /** Local append landed: the leader's own LEO moved, so might the HW. */

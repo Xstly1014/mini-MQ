@@ -113,9 +113,13 @@ public final class MQProducer implements Closeable {
     /**
      * Enqueues a message; the future completes with its committed offset.
      * Never blocks: slow paths (flush, retry) all live on callbacks/scheduler.
+     * The critical section covers buffer bookkeeping only — the proto build
+     * and transport write of a dispatched batch happen OUTSIDE the lock, so
+     * concurrent send() callers serialize on enqueue, not on network I/O.
      */
     public CompletableFuture<Long> send(String topic, byte[] payload) {
         CompletableFuture<Long> future = new CompletableFuture<Long>();
+        Batch toDispatch = null;
         synchronized (lock) {
             if (closed) {
                 future.completeExceptionally(new IllegalStateException("producer closed"));
@@ -134,32 +138,43 @@ public final class MQProducer implements Closeable {
                 }, lingerMs, TimeUnit.MILLISECONDS);
             }
             if (bufferedBytes >= batchSizeBytes) {
-                flushLocked();
+                toDispatch = drainLocked();
             }
+        }
+        if (toDispatch != null) {
+            sendBatch(toDispatch);
         }
         return future;
     }
 
     private void onLinger() {
+        Batch toDispatch = null;
         synchronized (lock) {
             // busy in-flight: leave the buffer, the ack path re-flushes
             if (!closed && inFlight == null) {
-                flushLocked();
+                toDispatch = drainLocked();
             }
+        }
+        if (toDispatch != null) {
+            sendBatch(toDispatch);
         }
     }
 
     /**
      * Caller must hold {@code lock}. Drains up to one byte-budget worth of
-     * the buffer into a batch; whatever overflows stays buffered and is
+     * the buffer into a batch, claims the in-flight slot, and returns the
+     * batch so the caller can dispatch it OUTSIDE the lock (proto encoding
+     * and the transport write are pure with respect to shared state: they
+     * read the batch and the volatile acks, and the ack path re-checks
+     * inFlight under the lock). Whatever overflows stays buffered and is
      * relayed by the next {@link #finish}. Slicing here (not only on send())
      * matters: while a batch is in flight the buffer keeps growing, and the
      * ack-time relay must not ship it as one oversized frame — the wire
      * protocol caps frames at 1 MiB.
      */
-    private void flushLocked() {
+    private Batch drainLocked() {
         if (buffer.isEmpty() || inFlight != null) {
-            return;
+            return null;
         }
         List<PendingSend> takes = new ArrayList<PendingSend>();
         long takenBytes = 0;
@@ -174,7 +189,7 @@ public final class MQProducer implements Closeable {
         }
         bufferedBytes -= takenBytes;
         inFlight = new Batch(takes);
-        sendBatch(inFlight);
+        return inFlight;
     }
 
     private void sendBatch(final Batch batch) {
@@ -266,13 +281,17 @@ public final class MQProducer implements Closeable {
 
     private void finish(Batch batch) {
         batch.done.countDown();
+        Batch toDispatch = null;
         synchronized (lock) {
             if (inFlight == batch) {
                 inFlight = null;
                 if (!buffer.isEmpty()) {
-                    flushLocked(); // relay the next accumulated batch
+                    toDispatch = drainLocked(); // relay the next accumulated batch
                 }
             }
+        }
+        if (toDispatch != null) {
+            sendBatch(toDispatch);
         }
     }
 
@@ -284,14 +303,18 @@ public final class MQProducer implements Closeable {
      */
     @Override
     public void close() throws IOException {
+        Batch finalBatch = null;
         synchronized (lock) {
             if (closed) {
                 return;
             }
             closed = true;
             if (!buffer.isEmpty() && inFlight == null) {
-                flushLocked(); // final batch, closed flag does not block it
+                finalBatch = drainLocked(); // final batch, closed flag does not block it
             }
+        }
+        if (finalBatch != null) {
+            sendBatch(finalBatch);
         }
         long deadline = System.currentTimeMillis() + CLOSE_TIMEOUT_MS;
         try {

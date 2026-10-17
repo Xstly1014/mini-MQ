@@ -1,0 +1,42 @@
+Oct 17, 2026 10:38:26 PM com.minimq.client.FailoverTransport adopt
+INFO: failover transport connected to /127.0.0.1:9701
+Oct 17, 2026 10:38:28 PM com.minimq.client.FailoverTransport adopt
+INFO: failover transport connected to /127.0.0.1:9701
+Oct 17, 2026 10:38:29 PM com.minimq.client.FailoverTransport adopt
+INFO: failover transport connected to /127.0.0.1:9701
+{"mode":"produce","readMode":"cold","latencyKind":"produce-ack","cluster":"rf3","concurrency":1,"messages":60000,"payload":1024,"warmup":6000,"rounds":3,"lingerUs":500,"batch":64,"zeroCopy":true,"flushMode":"OS_FLUSH","throughputMsgSec":36577,"throughputMbSec":37.455,"p50Ms":742.296,"p95Ms":1531.355,"p99Ms":1588.980,"p999Ms":1600.112,"consumed":60000,"processCpuCores":0.4460,"heapUsedBytesAtEnd":243860904,"samples":"36577,755.082,1531.355,1588.980,1600.112,0.7194,108094136;36166,742.296,1571.225,1630.127,1642.277,0.4460,252207472;37841,721.375,1485.982,1545.549,1556.774,0.3469,243860904"}
+Oct 17, 2026 10:38:31 PM com.minimq.client.FailoverTransport adopt
+INFO: failover transport connected to /127.0.0.1:9701
+Oct 17, 2026 10:38:33 PM com.minimq.client.FailoverTransport adopt
+INFO: failover transport connected to /127.0.0.1:9701
+Oct 17, 2026 10:38:35 PM com.minimq.client.FailoverTransport adopt
+INFO: failover transport connected to /127.0.0.1:9701
+{"mode":"produce","readMode":"cold","latencyKind":"produce-ack","cluster":"rf3","concurrency":2,"messages":60000,"payload":1024,"warmup":6000,"rounds":3,"lingerUs":500,"batch":64,"zeroCopy":true,"flushMode":"OS_FLUSH","throughputMsgSec":37304,"throughputMbSec":38.199,"p50Ms":711.263,"p95Ms":1524.215,"p99Ms":1582.728,"p999Ms":1594.046,"consumed":60000,"processCpuCores":0.1027,"heapUsedBytesAtEnd":508451360,"samples":"38243,708.965,1489.627,1547.071,1558.227,0.0637,508451360;37304,727.679,1524.215,1582.728,1594.046,0.1181,776886816;36256,711.263,1571.867,1628.040,1639.493,0.1027,480801144"}
+Oct 17, 2026 10:38:36 PM com.minimq.client.FailoverTransport adopt
+INFO: failover transport connected to /127.0.0.1:9701
+Oct 17, 2026 10:38:38 PM com.minimq.client.FailoverTransport adopt
+INFO: failover transport connected to /127.0.0.1:9701
+Oct 17, 2026 10:38:40 PM com.minimq.client.FailoverTransport adopt
+INFO: failover transport connected to /127.0.0.1:9701
+{"mode":"produce","readMode":"cold","latencyKind":"produce-ack","cluster":"rf3","concurrency":4,"messages":60000,"payload":1024,"warmup":6000,"rounds":3,"lingerUs":500,"batch":64,"zeroCopy":true,"flushMode":"OS_FLUSH","throughputMsgSec":38001,"throughputMbSec":38.913,"p50Ms":711.042,"p95Ms":1497.101,"p99Ms":1555.022,"p999Ms":1566.532,"consumed":60000,"processCpuCores":0.0897,"heapUsedBytesAtEnd":1114760816,"samples":"38422,711.042,1480.486,1536.605,1547.840,0.0897,794073776;37859,717.503,1502.648,1559.058,1570.329,0.1451,1114760816;38001,702.779,1497.101,1555.022,1566.532,0.0760,1433527920"}
+Oct 17, 2026 10:38:42 PM com.minimq.client.FailoverTransport adopt
+INFO: failover transport connected to /127.0.0.1:9701
+Oct 17, 2026 10:38:43 PM com.minimq.client.FailoverTransport adopt
+INFO: failover transport connected to /127.0.0.1:9701
+Oct 17, 2026 10:38:45 PM com.minimq.client.FailoverTransport adopt
+INFO: failover transport connected to /127.0.0.1:9701
+{"mode":"produce","readMode":"cold","latencyKind":"produce-ack","cluster":"rf3","concurrency":8,"messages":60000,"payload":1024,"warmup":6000,"rounds":3,"lingerUs":500,"batch":64,"zeroCopy":true,"flushMode":"OS_FLUSH","throughputMsgSec":37492,"throughputMbSec":38.392,"p50Ms":870.793,"p95Ms":1514.984,"p99Ms":1572.726,"p999Ms":1584.777,"consumed":60000,"processCpuCores":0.1250,"heapUsedBytesAtEnd":1819403888,"samples":"37492,870.641,1514.984,1572.726,1584.777,0.1250,1819403888;37543,870.793,1512.701,1572.252,1583.512,0.0876,2205279856;35879,942.487,1565.577,1624.471,1636.448,0.4306,466518176"}
+Oct 17, 2026 10:38:47 PM com.minimq.client.FailoverTransport adopt
+INFO: failover transport connected to /127.0.0.1:9701
+Oct 17, 2026 10:38:49 PM com.minimq.client.FailoverTransport adopt
+INFO: failover transport connected to /127.0.0.1:9701
+Oct 17, 2026 10:38:51 PM com.minimq.client.FailoverTransport adopt
+INFO: failover transport connected to /127.0.0.1:9701
+{"mode":"produce","readMode":"cold","latencyKind":"produce-ack","cluster":"rf3","concurrency":16,"messages":60000,"payload":1024,"warmup":6000,"rounds":3,"lingerUs":500,"batch":64,"zeroCopy":true,"flushMode":"OS_FLUSH","throughputMsgSec":37662,"throughputMbSec":38.566,"p50Ms":860.664,"p95Ms":1512.442,"p99Ms":1569.611,"p999Ms":1580.805,"consumed":60000,"processCpuCores":0.0816,"heapUsedBytesAtEnd":1239710160,"samples":"35108,984.845,1624.795,1684.483,1696.026,0.0702,852874160;37662,860.664,1512.442,1569.611,1580.805,0.0816,1239710160;37859,856.954,1502.016,1559.317,1570.870,0.0883,1625586128"}
+Oct 17, 2026 10:38:52 PM com.minimq.client.FailoverTransport adopt
+INFO: failover transport connected to /127.0.0.1:9701
+Oct 17, 2026 10:38:54 PM com.minimq.client.FailoverTransport adopt
+INFO: failover transport connected to /127.0.0.1:9701
+Oct 17, 2026 10:38:56 PM com.minimq.client.FailoverTransport adopt
+INFO: failover transport connected to /127.0.0.1:9701
+{"mode":"produce","readMode":"cold","latencyKind":"produce-ack","cluster":"rf3","concurrency":32,"messages":60000,"payload":1024,"warmup":6000,"rounds":3,"lingerUs":500,"batch":64,"zeroCopy":true,"flushMode":"OS_FLUSH","throughputMsgSec":35158,"throughputMbSec":36.002,"p50Ms":968.712,"p95Ms":1620.292,"p99Ms":1677.219,"p999Ms":1689.061,"consumed":60000,"processCpuCores":0.0938,"heapUsedBytesAtEnd":1015952152,"samples":"37324,877.153,1525.797,1582.354,1593.335,0.0995,2158597088;35158,968.712,1620.292,1677.219,1689.061,0.0938,533069872;33485,1058.509,1707.548,1766.869,1778.141,0.0670,1015952152"}

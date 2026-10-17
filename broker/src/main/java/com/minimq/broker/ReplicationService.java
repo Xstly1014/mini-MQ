@@ -15,6 +15,7 @@ import java.util.logging.Logger;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.minimq.protocol.Frame;
+import com.minimq.protocol.FrameDecoder;
 import com.minimq.protocol.MessageType;
 import com.minimq.protocol.gen.MqProto;
 import com.minimq.replica.EpochCheckpoint;
@@ -431,6 +432,11 @@ public final class ReplicationService
         if (!leader) {
             return notLeaderResponse();
         }
+        // The catch-up bar: the leader's LEO at fetch-serve start. Judging
+        // against the LIVE end here would race with in-flight appends and
+        // evict healthy followers under sustained load (see
+        // ReplicaManager.onFollowerFetch).
+        long logEndAtArrival = log.maxOffset();
         long epoch = checkpoint.latestEpoch();
         long epochStart = checkpoint.startOffsetFor(epoch);
         if (req.getFollowerEpoch() > epoch) {
@@ -449,10 +455,10 @@ public final class ReplicationService
                     .setHighWatermark(replicas.highWatermark())
                     .build();
         }
-        List<CommitLog.RawRecord> raw = log.readRawFrom(
+        List<CommitLog.RawRecord> raw = capToFrameBudget(log.readRawFrom(
                 req.getOffset(), req.getMaxBytes() > 0
                         ? Math.min(req.getMaxBytes(), config.getReplicaMaxFetchBytes())
-                        : config.getReplicaMaxFetchBytes());
+                        : config.getReplicaMaxFetchBytes()));
         long next = req.getOffset();
         if (!raw.isEmpty()) {
             CommitLog.RawRecord last = raw.get(raw.size() - 1);
@@ -460,7 +466,8 @@ public final class ReplicationService
         }
         // Record the position BEFORE answering: the ack the follower bases
         // on this response must already be covered by the bookkeeping.
-        long hw = replicas.onFollowerFetch(req.getFollowerId(), req.getOffset());
+        long hw = replicas.onFollowerFetch(req.getFollowerId(), req.getOffset(),
+                logEndAtArrival);
         MqProto.FetchResponse.Builder b = MqProto.FetchResponse.newBuilder()
                 .setLeaderEpoch(epoch)
                 .setEpochStartOffset(epochStart)
@@ -484,6 +491,52 @@ public final class ReplicationService
             b.setLeaderHint(hint);
         }
         return b.build();
+    }
+
+    // ------------------------------------------------------------------
+    // frame-budget discipline (shared shape with the consumer FETCH path)
+    // ------------------------------------------------------------------
+
+    /** Fixed protobuf furniture of a FETCH_RESP (fields + encoding slack). */
+    private static final int REPLICATION_META_FIXED_RESERVE = 512;
+    /** Per RecordData: tag/offset/size varints and payload framing. */
+    private static final int REPLICATION_META_PER_RECORD_RESERVE = 128;
+
+    /**
+     * Trims a raw replication batch to the wire's frame guard BEFORE it is
+     * encoded. The follower's decoder hard-closes at
+     * {@link FrameDecoder#MAX_FRAME_LENGTH}, and an overshooting FETCH_RESP is
+     * not merely dropped — the follower times out, retries the SAME fetch,
+     * and replication wedges on the same oversized response forever (each
+     * retry rebuilds it identically). The consumer FETCH path has had this
+     * budget discipline since M2; replication must not be the one path
+     * without it.
+     *
+     * <p>
+     * A single record too big for the frame (payload approaching
+     * {@code MAX_MESSAGE_SIZE=4MiB} vs the 1MiB frame guard) can never ride
+     * this transport — the batch returns empty and the follower stays put
+     * with a loud warning rather than a silent divergence. Same trade-off
+     * the consumer FETCH makes (near-MAX_MESSAGE_SIZE records are dropped
+     * there too); relaxing it needs a bigger frame guard or record
+     * fragmentation, not silence.
+     */
+    private List<CommitLog.RawRecord> capToFrameBudget(List<CommitLog.RawRecord> raw) {
+        long budget = FrameDecoder.MAX_FRAME_LENGTH - Frame.HEADER_SIZE - 4L
+                - REPLICATION_META_FIXED_RESERVE;
+        int keep = 0;
+        long used = 0;
+        while (keep < raw.size()
+                && used + raw.get(keep).raw.length + REPLICATION_META_PER_RECORD_RESERVE <= budget) {
+            used += raw.get(keep).raw.length + REPLICATION_META_PER_RECORD_RESERVE;
+            keep++;
+        }
+        if (keep == 0 && !raw.isEmpty()) {
+            LOG.warning("replication batch truncated to empty by frame guard: first record "
+                    + raw.get(0).raw.length + "B exceeds the " + budget
+                    + "B wire budget — follower cannot consume this record over a 1MiB frame");
+        }
+        return raw.subList(0, keep);
     }
 
     // ------------------------------------------------------------------

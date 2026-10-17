@@ -124,18 +124,32 @@ public class CommitLog implements Closeable {
 
     /**
      * Replication append (M3): the follower writes the leader's raw record
-     * bytes — verbatim, no decode/encode roundtrip — at the exact global
+     * bytes — verbatim, no decode/re-encode roundtrip — at the exact global
      * offset the leader says they belong to. Any mismatch with the local
      * frontier means the logs diverged and the epoch arbitration missed it;
      * refusing loudly beats silently interleaving two histories.
+     *
+     * <p>
+     * One mismatch is legitimate: the leader's offsets are PHYSICAL
+     * ({@code appendInternal} computes {@code global = segmentStart + pos}),
+     * so when the leader rolled mid-stream, the jump from our frontier to its
+     * next offset is exactly the sealed segment's tail slack. Rolling here
+     * reproduces the leader's physical alignment instead of crying
+     * divergence — the bytes were never missing, only the padding was. Any
+     * other gap stays a hard refusal.
      *
      * @return the new log end (== expectedOffset + length)
      */
     public long appendReplicated(long expectedOffset, byte[] encoded) throws IOException {
         synchronized (appendLock) {
             if (expectedOffset != appendFrontier) {
-                throw new IOException("replication offset mismatch: leader says " + expectedOffset
-                        + ", local log ends at " + appendFrontier + " — divergence upstream of append");
+                long nextSegStart = current.fileFromOffset() + segmentSize;
+                if (expectedOffset != nextSegStart || expectedOffset < appendFrontier) {
+                    throw new IOException("replication offset mismatch: leader says "
+                            + expectedOffset + ", local log ends at " + appendFrontier
+                            + " — divergence upstream of append");
+                }
+                roll(); // align to the leader's physical segment layout
             }
             int length = encoded.length;
             if (length > segmentSize) {
