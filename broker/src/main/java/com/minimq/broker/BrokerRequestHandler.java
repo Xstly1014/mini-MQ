@@ -84,16 +84,28 @@ public class BrokerRequestHandler {
     private final ReplicationGate gate;
     /** acks=all park timeout (see gate.awaitReplicated). */
     private final long replicationAwaitTimeoutMs;
+    /**
+     * M4 leader seq-key dedup window, or null = disabled (M1-M3 semantics:
+     * every produce appends).
+     */
+    private final DedupWindow dedup;
 
     public BrokerRequestHandler(CommitLog commitLog, ConsumeQueueStore consumeQueues,
             FlushMode flushMode, long flushAwaitTimeoutMs, boolean zeroCopyFetch) {
         this(commitLog, consumeQueues, flushMode, flushAwaitTimeoutMs, zeroCopyFetch,
-                ReplicationGate.standalone(commitLog), 5_000L);
+                ReplicationGate.standalone(commitLog), 5_000L, null);
     }
 
     public BrokerRequestHandler(CommitLog commitLog, ConsumeQueueStore consumeQueues,
             FlushMode flushMode, long flushAwaitTimeoutMs, boolean zeroCopyFetch,
             ReplicationGate gate, long replicationAwaitTimeoutMs) {
+        this(commitLog, consumeQueues, flushMode, flushAwaitTimeoutMs, zeroCopyFetch,
+                gate, replicationAwaitTimeoutMs, null);
+    }
+
+    public BrokerRequestHandler(CommitLog commitLog, ConsumeQueueStore consumeQueues,
+            FlushMode flushMode, long flushAwaitTimeoutMs, boolean zeroCopyFetch,
+            ReplicationGate gate, long replicationAwaitTimeoutMs, DedupWindow dedup) {
         this.commitLog = commitLog;
         this.consumeQueues = consumeQueues;
         this.flushMode = flushMode;
@@ -101,6 +113,7 @@ public class BrokerRequestHandler {
         this.zeroCopyFetch = zeroCopyFetch;
         this.gate = gate;
         this.replicationAwaitTimeoutMs = replicationAwaitTimeoutMs;
+        this.dedup = dedup;
     }
 
     /** Processes one request frame; null = no response. */
@@ -231,17 +244,54 @@ public class BrokerRequestHandler {
             MqProto.ProduceAck.Builder builder = MqProto.ProduceAck.newBuilder()
                     .setStatus(MqProto.ProduceStatus.OK);
             long now = System.currentTimeMillis();
+            int appended = 0;
+            int duplicates = 0;
+            // M4: keys are recorded into the dedup window only once the
+            // batch COMMITS (flush + replication gates passed). Recording
+            // at append time would answer a retry with DUPLICATE for data
+            // that only ever existed on an isolated leader's local log —
+            // a false "already there" that loses the message after the
+            // truncation. A window entry is a COMMITTED-offset promise.
+            java.util.List<long[]> appendedKeys = dedup != null
+                    ? new java.util.ArrayList<long[]>(req.getMessagesCount())
+                    : null;
             for (MqProto.MessageData data : req.getMessagesList()) {
+                long keyHash = hash64(data.getSeqKey());
+                // M4 dedup window: a retry of an already-committed seq key
+                // (same leader session) gets the ORIGINAL offset back instead
+                // of a second append — the producer's at-least-once retry
+                // collapses to exactly-once here. see() also refreshes the
+                // key's LRU position so a retry stream never evicts itself.
+                Long prior = dedup != null ? dedup.seen(keyHash) : null;
+                if (prior != null) {
+                    builder.addOffsets(prior.longValue());
+                    duplicates++;
+                    continue;
+                }
                 Message msg = new Message(
                         data.getTimestamp() != 0 ? data.getTimestamp() : now,
-                        hash64(data.getSeqKey()),
+                        keyHash,
                         data.getTopic(),
                         data.getPayload().toByteArray());
-                builder.addOffsets(commitLog.append(msg));
+                long offset = commitLog.append(msg);
+                builder.addOffsets(offset);
+                appended++;
+                if (appendedKeys != null) {
+                    appendedKeys.add(new long[] { keyHash, offset });
+                }
+            }
+            // All-duplicate batch: nothing was appended, so no flush or
+            // replication wait can change anything — the original offsets
+            // already passed every gate. DUPLICATE tells the producer the
+            // retry converged (v1.4).
+            if (duplicates > 0 && appended == 0) {
+                builder.setStatus(MqProto.ProduceStatus.DUPLICATE);
+                ack = builder.build();
+                return new Frame(MessageType.PRODUCE_ACK, request.requestId(), ack.toByteArray());
             }
             // The leader's own LEO moved: its number in the HW minimum must
             // move with it, or acks=all waits park against a stale HW.
-            if (req.getMessagesCount() > 0) {
+            if (appended > 0) {
                 gate.onLocalAppend();
             }
 
@@ -277,6 +327,34 @@ public class BrokerRequestHandler {
                         .setError("replication await timeout")
                         .build();
                 return new Frame(MessageType.PRODUCE_ACK, request.requestId(), ack.toByteArray());
+            }
+            // ISR re-check AFTER the park: a sweep that evicted followers to
+            // below min.insync.replicas also jumps the HW to the leader's own
+            // LEO (the min lost its members) — without this check the parked
+            // batch would be acked OK on the leader's SINGLE copy, a
+            // "replication" the eviction fabricated. The loud refusal is the
+            // contract: below min.insync.replicas we stop promising durability.
+            if (req.getAcks() == MqProto.AckMode.ACKS_ALL && req.getMessagesCount() > 0
+                    && !gate.acksAllAdmissible()) {
+                MqProto.ProduceAck.Builder small = MqProto.ProduceAck.newBuilder()
+                        .setStatus(MqProto.ProduceStatus.ERROR)
+                        .setError("ISR below min.insync.replicas")
+                        .setErrorCode(MqProto.ErrorCode.ISR_TOO_SMALL);
+                for (int i = 0; i < req.getMessagesCount(); i++) {
+                    small.addOffsets(-1L);
+                }
+                return new Frame(MessageType.PRODUCE_ACK, request.requestId(),
+                        small.build().toByteArray());
+            }
+            // Every durability gate passed: NOW the window may promise the
+            // keys. (Flush timeout and replication timeout both return above
+            // without recording — those appends were never committed, so a
+            // producer retry MUST re-append rather than converge.)
+            if (appendedKeys != null && !appendedKeys.isEmpty()) {
+                for (int i = 0; i < appendedKeys.size(); i++) {
+                    long[] ko = appendedKeys.get(i);
+                    dedup.record(ko[0], ko[1]);
+                }
             }
             ack = builder.build();
         } catch (Exception e) {
@@ -318,9 +396,19 @@ public class BrokerRequestHandler {
                 return prefixedFrame(MessageType.FETCH_RESP, request.requestId(), redirect.build());
             }
 
+            if (!gate.readsAdmissible()) {
+                MqProto.FetchResponse.Builder small = MqProto.FetchResponse.newBuilder()
+                        .setNextOffset(req.getOffset())
+                        .setErrorCode(MqProto.ErrorCode.ISR_TOO_SMALL);
+                String hint = gate.leaderHint();
+                if (hint != null) {
+                    small.setLeaderHint(hint);
+                }
+                return prefixedFrame(MessageType.FETCH_RESP, request.requestId(), small.build());
+            }
+
             int maxCount = Math.max(1, req.getMaxCount());
-            List<ConsumeQueue.Entry> entries =
-                    consumeQueues.readFrom(req.getTopic(), req.getOffset(), maxCount);
+            List<ConsumeQueue.Entry> entries = consumeQueues.readFrom(req.getTopic(), req.getOffset(), maxCount);
 
             // HW visibility: a record counts as "there" only once the whole
             // cluster promised it — strictly below the watermark. Entries

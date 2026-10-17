@@ -146,12 +146,34 @@ class FailoverTransportTest {
                 new Frame(MessageType.PRODUCE_ACK, 0, b.build().toByteArray()));
     }
 
+    private static CompletableFuture<Frame> isrTooSmallAck(String hint) {
+        MqProto.ProduceAck.Builder b = MqProto.ProduceAck.newBuilder()
+                .setStatus(MqProto.ProduceStatus.ERROR)
+                .setErrorCode(MqProto.ErrorCode.ISR_TOO_SMALL)
+                .addOffsets(-1L);
+        if (hint != null) {
+            b.setLeaderHint(hint);
+        }
+        return CompletableFuture.completedFuture(
+                new Frame(MessageType.PRODUCE_ACK, 0, b.build().toByteArray()));
+    }
+
     /** FETCH_RESP frames carry the v1.2 [4B metaLen][meta] body layout. */
     static Frame fetchResp(MqProto.FetchResponse meta) {
         byte[] m = meta.toByteArray();
         byte[] body = new byte[4 + m.length];
         ByteBuffer.wrap(body).putInt(m.length).put(m);
         return new Frame(MessageType.FETCH_RESP, 0, body);
+    }
+
+    private static CompletableFuture<Frame> fetchIsrTooSmall(String hint) {
+        MqProto.FetchResponse.Builder b = MqProto.FetchResponse.newBuilder()
+                .setNextOffset(0)
+                .setErrorCode(MqProto.ErrorCode.ISR_TOO_SMALL);
+        if (hint != null) {
+            b.setLeaderHint(hint);
+        }
+        return CompletableFuture.completedFuture(fetchResp(b.build()));
     }
 
     private static byte[] produceBody() {
@@ -286,6 +308,54 @@ class FailoverTransportTest {
         t.close();
     }
 
+    @Test
+    void produceIsrTooSmallSelfHintDoesNotRetrySameNodeAndNextRequestBootstraps() throws Exception {
+        FakeCluster cluster = new FakeCluster();
+        FakeNode a = cluster.node("a-host", 1, true);
+        FakeNode b = cluster.node("b-host", 2, true);
+        a.script.add((req, i) -> isrTooSmallAck("a-host:1"));
+        b.tail = (req, i) -> okAck(17L);
+        FailoverTransport t = transport(cluster);
+
+        Frame first = t.request(MessageType.PRODUCE, produceBody()).get(5, TimeUnit.SECONDS);
+        MqProto.ProduceAck firstAck = MqProto.ProduceAck.parseFrom(first.body());
+        assertEquals(MqProto.ProduceStatus.ERROR, firstAck.getStatus());
+        assertEquals(MqProto.ErrorCode.ISR_TOO_SMALL, firstAck.getErrorCode());
+        assertEquals(1, a.served.get(), "self hint must not cause an in-request retry loop");
+
+        Frame second = t.request(MessageType.PRODUCE, produceBody()).get(5, TimeUnit.SECONDS);
+        assertEquals(MqProto.ProduceStatus.OK,
+                MqProto.ProduceAck.parseFrom(second.body()).getStatus());
+        assertEquals(b.addr, t.currentNode(), "next request must bootstrap to healthy leader");
+        assertEquals(1, b.served.get());
+        t.close();
+    }
+
+    @Test
+    void produceIsrTooSmallOnEveryNodeExhaustsProducerBudgetLoudly() throws Exception {
+        FakeCluster cluster = new FakeCluster();
+        FakeNode a = cluster.node("a-host", 1, true);
+        FakeNode b = cluster.node("b-host", 2, true);
+        a.tail = (req, i) -> isrTooSmallAck("a-host:1");
+        b.tail = (req, i) -> isrTooSmallAck(null);
+        MQProducer producer = new MQProducer(transport(cluster), 1, 0L, 3, 1L)
+                .acks(MqProto.AckMode.ACKS_ALL);
+        try {
+            // ISR refusals must reach the producer's retry budget instead
+            // of multiplying it by the transport's redirect budget.
+            CompletableFuture<Long> f = producer.send("t", new byte[] { 1 });
+            ExecutionException e = assertThrows(ExecutionException.class,
+                    () -> f.get(5, TimeUnit.SECONDS));
+            assertTrue(e.getCause() instanceof IOException);
+            assertTrue(e.getCause().getMessage().contains("send failed after 3 retries"));
+            assertTrue(e.getCause().getMessage().contains("ISR below min"));
+            assertEquals(2, a.served.get(), "retries must leave the minority node");
+            assertEquals(2, b.served.get(), "all retries remain bounded");
+        } finally {
+            producer.close();
+        }
+    }
+
     // ------------------------------------------------------------------
     // consumer redirect: NOT_LEADER on the FETCH path
     // ------------------------------------------------------------------
@@ -330,6 +400,93 @@ class FailoverTransportTest {
         } finally {
             java.nio.file.Files.walk(dir, java.nio.file.FileVisitOption.FOLLOW_LINKS)
                     .sorted(java.util.Comparator.reverseOrder())
+                    .forEach(p -> p.toFile().delete());
+        }
+    }
+
+    @Test
+    void consumerFetchIsrTooSmallWithSelfHintBootstrapsToMajority() throws Exception {
+        FakeCluster cluster = new FakeCluster();
+        FakeNode a = cluster.node("a-host", 1, true);
+        FakeNode b = cluster.node("b-host", 2, true);
+        a.script.add((req, i) -> fetchIsrTooSmall("a-host:1"));
+        b.script.add((req, i) -> CompletableFuture.completedFuture(fetchResp(
+                MqProto.FetchResponse.newBuilder().setNextOffset(11)
+                        .addRecords(MqProto.RecordData.newBuilder().setOffset(0)
+                                .setTopic("orders")
+                                .setPayload(com.google.protobuf.ByteString.copyFromUtf8("m1")))
+                        .build())));
+        java.nio.file.Path dir = java.nio.file.Files.createTempDirectory("offsets");
+        try {
+            MQConsumer consumer = new MQConsumer(transport(cluster), "orders",
+                    OffsetStore.load(new java.io.File(dir.toFile(), "consumer.properties")), 10, 1_000L);
+            try {
+                assertEquals(1, consumer.poll().size());
+                consumer.commit();
+                assertEquals(11L, consumer.committedOffset());
+                assertEquals(1, a.served.get());
+                assertEquals(1, b.served.get());
+            } finally {
+                consumer.close();
+            }
+        } finally {
+            java.nio.file.Files.walk(dir).sorted(java.util.Comparator.reverseOrder())
+                    .forEach(p -> p.toFile().delete());
+        }
+    }
+
+    @Test
+    void consumerFetchIsrTooSmallWithoutHintReBootstraps() throws Exception {
+        FakeCluster cluster = new FakeCluster();
+        FakeNode a = cluster.node("a-host", 1, true);
+        FakeNode b = cluster.node("b-host", 2, true);
+        a.script.add((req, i) -> fetchIsrTooSmall(null));
+        b.script.add((req, i) -> CompletableFuture.completedFuture(fetchResp(
+                MqProto.FetchResponse.newBuilder().setNextOffset(9)
+                        .addRecords(MqProto.RecordData.newBuilder().setOffset(0)
+                                .setTopic("orders")
+                                .setPayload(com.google.protobuf.ByteString.copyFromUtf8("m1")))
+                        .build())));
+        java.nio.file.Path dir = java.nio.file.Files.createTempDirectory("offsets");
+        try {
+            MQConsumer consumer = new MQConsumer(transport(cluster), "orders",
+                    OffsetStore.load(new java.io.File(dir.toFile(), "consumer.properties")), 10, 1_000L);
+            try {
+                assertEquals(1, consumer.poll().size());
+                consumer.commit();
+                assertEquals(9L, consumer.committedOffset());
+                assertEquals(1, b.served.get());
+            } finally {
+                consumer.close();
+            }
+        } finally {
+            java.nio.file.Files.walk(dir).sorted(java.util.Comparator.reverseOrder())
+                    .forEach(p -> p.toFile().delete());
+        }
+    }
+
+    @Test
+    void fetchIsrTooSmallOnEveryNodeExhaustsBudgetLoudly() throws Exception {
+        FakeCluster cluster = new FakeCluster();
+        cluster.node("a-host", 1, true).tail = (req, i) -> fetchIsrTooSmall("a-host:1");
+        cluster.node("b-host", 2, true).tail = (req, i) -> fetchIsrTooSmall(null);
+        FailoverTransport t = new FailoverTransport(cluster.bootstrap, 100L, 3, 1L, 2L,
+                cluster.connector());
+        java.nio.file.Path dir = java.nio.file.Files.createTempDirectory("offsets");
+        try {
+            MQConsumer consumer = new MQConsumer(t, "orders",
+                    OffsetStore.load(new java.io.File(dir.toFile(), "consumer.properties")), 10, 1_000L);
+            try {
+                IOException e = assertThrows(IOException.class, consumer::poll);
+                assertTrue(e.getMessage().contains("gave up after 3")
+                                || (e.getCause() != null
+                                    && String.valueOf(e.getCause().getMessage()).contains("gave up after 3")),
+                        "budget exhaustion must be reported, message was: " + e);
+            } finally {
+                consumer.close();
+            }
+        } finally {
+            java.nio.file.Files.walk(dir).sorted(java.util.Comparator.reverseOrder())
                     .forEach(p -> p.toFile().delete());
         }
     }

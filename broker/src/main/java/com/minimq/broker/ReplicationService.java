@@ -35,18 +35,18 @@ import io.netty.util.concurrent.DefaultThreadFactory;
  *
  * <h3>What runs where</h3>
  * <ul>
- *   <li><b>RaftNode</b> owns the election on its own single-threaded event
- *   loop; this class is its {@link RaftNode.Transport} /
- *   {@link RaftNode.Listener} seam — role changes promote/demote the rest
- *   of the assembly.</li>
- *   <li><b>ReplicaManager</b> (leader side) tracks the ISR and the HW; the
- *   sweep timer keeps a dead follower from pinning the watermark.</li>
- *   <li><b>FollowerSyncer</b> (follower side) pulls raw bytes over
- *   {@link ClusterClient} and appends them verbatim.</li>
- *   <li><b>Replication thread</b>: FOLLOWER_FETCH requests land here (their
- *   own frame TYPE routes them without decoding), keeping replication
- *   traffic off the business pool — a stalled sync must never steal
- *   producer/consumer threads.</li>
+ * <li><b>RaftNode</b> owns the election on its own single-threaded event
+ * loop; this class is its {@link RaftNode.Transport} /
+ * {@link RaftNode.Listener} seam — role changes promote/demote the rest
+ * of the assembly.</li>
+ * <li><b>ReplicaManager</b> (leader side) tracks the ISR and the HW; the
+ * sweep timer keeps a dead follower from pinning the watermark.</li>
+ * <li><b>FollowerSyncer</b> (follower side) pulls raw bytes over
+ * {@link ClusterClient} and appends them verbatim.</li>
+ * <li><b>Replication thread</b>: FOLLOWER_FETCH requests land here (their
+ * own frame TYPE routes them without decoding), keeping replication
+ * traffic off the business pool — a stalled sync must never steal
+ * producer/consumer threads.</li>
  * </ul>
  *
  * <h3>Leader transitions</h3>
@@ -84,19 +84,27 @@ public final class ReplicationService
     private final ClusterClient client;
     private final ExecutorService replicationThread;
     private final ScheduledExecutorService sweeper;
+    /**
+     * M4 partition injection: inbound cluster frames from blocked peers die at
+     * routing.
+     */
+    private final PartitionShield shield;
 
-    /** Data-plane authority (volatile: read on business pool, raft thread writes). */
+    /**
+     * Data-plane authority (volatile: read on business pool, raft thread writes).
+     */
     private volatile boolean leader;
     /** Who we believe leads (hint source); -1 = no leader seen yet. */
     private volatile int lastSeenLeaderId = -1;
 
-    ReplicationService(BrokerConfig config, CommitLog log, ConsumeQueueStore store)
-            throws IOException {
+    ReplicationService(BrokerConfig config, CommitLog log, ConsumeQueueStore store,
+            PartitionShield shield) throws IOException {
         this.config = config;
         this.log = log;
         this.store = store;
         this.selfId = config.getNodeId();
         this.nodes = config.getClusterNodes();
+        this.shield = shield;
 
         File metaDir = metaDir(config);
         this.raftState = RaftState.open(new File(metaDir, "raft-state"));
@@ -154,7 +162,7 @@ public final class ReplicationService
 
         this.syncer = new FollowerSyncer(log, store, checkpoint, this,
                 config.getReplicaMaxFetchBytes());
-        this.client = new ClusterClient(selfId, nodes, this);
+        this.client = new ClusterClient(selfId, nodes, this, shield);
         this.replicationThread = Executors.newSingleThreadExecutor(
                 new DefaultThreadFactory("mini-mq-replication"));
         this.sweeper = Executors.newSingleThreadScheduledExecutor(
@@ -225,8 +233,8 @@ public final class ReplicationService
     }
 
     private void onHeartbeatFromLeader(int leaderId) {
-        lastSeenLeaderId = leaderId;
         synchronized (this) {
+            lastSeenLeaderId = leaderId;
             ensureFollowerSyncer();
         }
     }
@@ -269,8 +277,8 @@ public final class ReplicationService
         return REQUEST_IDS.incrementAndGet();
     }
 
-    private static final java.util.concurrent.atomic.AtomicLong REQUEST_IDS =
-            new java.util.concurrent.atomic.AtomicLong(1);
+    private static final java.util.concurrent.atomic.AtomicLong REQUEST_IDS = new java.util.concurrent.atomic.AtomicLong(
+            1);
 
     // ------------------------------------------------------------------
     // FollowerSyncer.LeaderChannel (follower sync thread)
@@ -289,8 +297,13 @@ public final class ReplicationService
                 .setFollowerEpoch(followerEpoch)
                 .setMaxBytes(maxBytes)
                 .build();
-        MqProto.FetchResponse resp = client.fetch(leaderId, req,
-                config.getReplicationAwaitTimeoutMs());
+        MqProto.FetchResponse resp = client.fetchUntilLeaderChanges(leaderId, req,
+                config.getReplicationAwaitTimeoutMs(), new java.util.function.IntSupplier() {
+                    @Override
+                    public int getAsInt() {
+                        return lastSeenLeaderId;
+                    }
+                });
         return toBatch(resp);
     }
 
@@ -324,6 +337,12 @@ public final class ReplicationService
      * safe on any thread; FOLLOWER_FETCH (the heavy one: mmap reads,
      * arbitration, bookkeeping) moves to the replication thread, and the
      * response goes back on the channel it came from.
+     *
+     * <p>
+     * M4 partition shield: every cluster frame names its sender in the
+     * body, and a blocked sender's frame dies HERE — before the election,
+     * the sync, any bookkeeping. To the sender it is indistinguishable from
+     * a dead network (it keeps writing; we keep dropping).
      */
     @Override
     public void onFrame(Channel channel, Frame frame) {
@@ -333,19 +352,42 @@ public final class ReplicationService
     private void routeRaftFrame(Frame frame, final Channel replyTo) {
         try {
             switch (frame.type()) {
-                case VOTE:
-                    node.handleVoteRequest(MqProto.VoteRequest.parseFrom(frame.body()));
+                case VOTE: {
+                    MqProto.VoteRequest req = MqProto.VoteRequest.parseFrom(frame.body());
+                    if (!shield.blocksInbound(req.getCandidateId())) {
+                        node.handleVoteRequest(req);
+                    }
                     return;
-                case VOTE_RESP:
-                    node.handleVoteResponse(MqProto.VoteResponse.parseFrom(frame.body()));
+                }
+                case VOTE_RESP: {
+                    MqProto.VoteResponse resp = MqProto.VoteResponse.parseFrom(frame.body());
+                    if (!shield.blocksInbound(resp.getResponderId())) {
+                        node.handleVoteResponse(resp);
+                    }
                     return;
-                case HEARTBEAT:
-                    node.handleHeartbeatRequest(MqProto.HeartbeatRequest.parseFrom(frame.body()));
+                }
+                case HEARTBEAT: {
+                    MqProto.HeartbeatRequest req = MqProto.HeartbeatRequest.parseFrom(frame.body());
+                    if (!shield.blocksInbound(req.getLeaderId())) {
+                        node.handleHeartbeatRequest(req);
+                    }
                     return;
-                case HEARTBEAT_RESP:
-                    node.handleHeartbeatResponse(MqProto.HeartbeatResponse.parseFrom(frame.body()));
+                }
+                case HEARTBEAT_RESP: {
+                    MqProto.HeartbeatResponse resp = MqProto.HeartbeatResponse.parseFrom(frame.body());
+                    if (!shield.blocksInbound(resp.getResponderId())) {
+                        node.handleHeartbeatResponse(resp);
+                    }
                     return;
+                }
                 case FOLLOWER_FETCH:
+                    // shield needs the sender id: a tiny parse here, the
+                    // heavy work on the replication thread reparses (protobuf
+                    // on a few-dozen-byte body is cheaper than a queue hop).
+                    if (shield.blocksInbound(
+                            MqProto.FetchRequest.parseFrom(frame.body()).getFollowerId())) {
+                        return; // partitioned fetch: silence, the follower times out
+                    }
                     replicationThread.execute(new Runnable() {
                         @Override
                         public void run() {
@@ -473,6 +515,12 @@ public final class ReplicationService
         return leader && replicas.acksAllAdmissible();
     }
 
+    /** Reads are unsafe on a leader that no longer has the minimum ISR. */
+    @Override
+    public boolean readsAdmissible() {
+        return leader && replicas.acksAllAdmissible();
+    }
+
     @Override
     public boolean awaitReplicated(long offset, long timeoutMs) throws InterruptedException {
         return leader && replicas.awaitReplicated(offset, timeoutMs);
@@ -500,6 +548,16 @@ public final class ReplicationService
     /** ISR snapshot including the leader (monitoring / tests). */
     public java.util.Set<Integer> isrSnapshot() {
         return replicas.isr();
+    }
+
+    /** Who we currently believe leads, -1 = nobody (chaos state / tests). */
+    public int lastSeenLeader() {
+        return lastSeenLeaderId;
+    }
+
+    /** The M4 partition injection handle (chaos state / tests). */
+    public PartitionShield shield() {
+        return shield;
     }
 
     // ------------------------------------------------------------------

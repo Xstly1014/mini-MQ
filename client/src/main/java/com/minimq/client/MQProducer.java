@@ -56,6 +56,18 @@ public final class MQProducer implements Closeable {
     private Batch inFlight;
     private boolean closed;
     private long seqCounter;
+    /**
+     * Per-instance identity inside every seq key (M4). The broker's dedup
+     * window is keyed by seqKey hash ALONE — a bare counter ("seq-0") is
+     * instance-local, so two producers (probe + storm, app-A + app-B)
+     * collide at key 0 and the second send is swallowed as a DUPLICATE
+     * with the FIRST sender's offset: a silent message loss. Mirroring
+     * Kafka's producerId, a random 64-bit id makes default keys globally
+     * unique while retries from THIS instance still collide with
+     * themselves — exactly the at-least-once -> dedup convergence M4 needs.
+     */
+    private final String producerId = Long.toUnsignedString(
+            java.util.concurrent.ThreadLocalRandom.current().nextLong());
 
     public MQProducer(Transport transport, int batchSizeBytes, long lingerMs,
             int maxRetries, long retryBackoffMs) {
@@ -110,7 +122,7 @@ public final class MQProducer implements Closeable {
                 return future;
             }
             buffer.addLast(new PendingSend(topic, payload,
-                    "seq-" + (seqCounter++), future));
+                    "seq-" + producerId + "-" + (seqCounter++), future));
             bufferedBytes += payload.length + topic.length() + 48; // ~ proto overhead
             if (buffer.size() == 1) {
                 // first message of a fresh batch: arm the linger timer
@@ -194,6 +206,12 @@ public final class MQProducer implements Closeable {
         }
         switch (ack.getStatus()) {
             case OK:
+            case DUPLICATE:
+                // DUPLICATE (v1.4): a retry converged against the leader's
+                // dedup window — the offsets are the ORIGINAL ones, so the
+                // futures complete with them exactly as if the first append
+                // had succeeded. To the caller the two statuses differ in
+                // nothing observable.
                 if (ack.getOffsetsCount() != batch.sends.size()) {
                     retry(batch, "offset count mismatch: "
                             + ack.getOffsetsCount() + " != " + batch.sends.size());
@@ -209,7 +227,15 @@ public final class MQProducer implements Closeable {
                 break;
             case ERROR:
             default:
-                fail(batch, new IOException("broker error: " + ack.getError()));
+                if (ack.getErrorCode() == MqProto.ErrorCode.ISR_TOO_SMALL) {
+                    // v1.4: transient by contract — the ISR re-forms (or the
+                    // leader changes and the transport redirects); resend
+                    // with backoff instead of surfacing a durability error
+                    // the caller cannot act on.
+                    retry(batch, "ISR below min.insync.replicas (auto-resend)");
+                } else {
+                    fail(batch, new IOException("broker error: " + ack.getError()));
+                }
                 break;
         }
     }

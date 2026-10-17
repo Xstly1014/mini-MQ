@@ -44,6 +44,11 @@ public interface ReplicationGate {
     /** acks=all admission: ISR still at/above min.insync.replicas? */
     boolean acksAllAdmissible();
 
+    /** Whether reads may expose data under the current replication state. */
+    default boolean readsAdmissible() {
+        return acksAllAdmissible();
+    }
+
     /**
      * Parks until the HW passes {@code offset} (the acks=all durability
      * gate). Returns false on timeout or loss of leadership — the caller

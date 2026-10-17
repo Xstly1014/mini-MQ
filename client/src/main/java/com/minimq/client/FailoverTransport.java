@@ -160,6 +160,17 @@ public final class FailoverTransport implements Transport {
                 result.complete(resp); // the normal case: a real answer
                 return;
             }
+            // ISR_TOO_SMALL is a real broker refusal.  Let the producer's
+            // bounded retry policy observe it, while dropping the stale
+            // connection so the next attempt bootstraps on another node.
+            if (type == MessageType.PRODUCE && isIsrTooSmall(resp)) {
+                invalidate(t);
+                synchronized (lock) {
+                    preferred = null;
+                }
+                result.complete(resp);
+                return;
+            }
             // NOT_LEADER: follow the hint when it exists, else re-bootstrap
             invalidate(t);
             synchronized (lock) {
@@ -170,6 +181,19 @@ public final class FailoverTransport implements Transport {
                             : "not leader, following hint " + hint);
         });
     }
+
+    private static boolean isIsrTooSmall(Frame resp) {
+        if (resp.type() != MessageType.PRODUCE_ACK) {
+            return false;
+        }
+        try {
+            return MqProto.ProduceAck.parseFrom(resp.body()).getErrorCode()
+                    == MqProto.ErrorCode.ISR_TOO_SMALL;
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+            return false;
+        }
+    }
+
 
     private void retryOrFail(final MessageType type, final byte[] body, final int attemptsLeft,
             final CompletableFuture<Frame> result, String reason) {
@@ -271,16 +295,27 @@ public final class FailoverTransport implements Transport {
     /**
      * Inspects a response for a redirect directive.
      *
-     * @return null = deliver as-is (no redirect); "" = NOT_LEADER without a
-     *         hint (re-bootstrap); "host:port" = NOT_LEADER, go there
+     * @return null = deliver as-is (no redirect); "" = redirect without a
+     *         hint (re-bootstrap); "host:port" = redirect, go there
      */
     static String redirectHint(Frame resp) {
         try {
             switch (resp.type()) {
                 case PRODUCE_ACK: {
                     MqProto.ProduceAck ack = MqProto.ProduceAck.parseFrom(resp.body());
-                    return ack.getErrorCode() == MqProto.ErrorCode.NOT_LEADER
-                            ? ack.getLeaderHint() : null;
+                    if (ack.getErrorCode() == MqProto.ErrorCode.NOT_LEADER) {
+                        return ack.getLeaderHint();
+                    }
+                    // v1.4 minority-leader case: a partitioned-away leader
+                    // keeps answering ISR_TOO_SMALL forever (it cannot hear
+                    // the new election to step down). Treat it as the
+                    // no-hint redirect so the transport re-bootstraps and
+                    // finds the majority side's leader — the metadata
+                    // refresh Kafka clients do in the same spot.
+                    if (ack.getErrorCode() == MqProto.ErrorCode.ISR_TOO_SMALL) {
+                        return ack.getLeaderHint().isEmpty() ? "" : ack.getLeaderHint();
+                    }
+                    return null;
                 }
                 case FETCH_RESP: {
                     byte[] body = resp.body();
@@ -293,6 +328,9 @@ public final class FailoverTransport implements Transport {
                     }
                     MqProto.FetchResponse fr = MqProto.FetchResponse.parseFrom(
                             ByteBuffer.wrap(body, 4, metaLen));
+                    if (fr.getErrorCode() == MqProto.ErrorCode.ISR_TOO_SMALL) {
+                        return ""; // the hint may name this minority leader
+                    }
                     return fr.getErrorCode() == MqProto.ErrorCode.NOT_LEADER
                             ? fr.getLeaderHint() : null;
                 }

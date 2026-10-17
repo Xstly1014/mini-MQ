@@ -76,17 +76,23 @@ final class ClusterClient {
     private final int selfId;
     private final List<InetSocketAddress> nodes;
     private final Router router;
+    /**
+     * M4 partition shield: a FETCH_RESP from a blocked peer dies like a timeout.
+     */
+    private final PartitionShield shield;
     private final NioEventLoopGroup group;
     private final Bootstrap bootstrap;
     private final ConcurrentMap<Integer, Channel> channels = new ConcurrentHashMap<Integer, Channel>();
-    private final ConcurrentMap<Long, CompletableFuture<MqProto.FetchResponse>> pendingFetches = new ConcurrentHashMap<Long, CompletableFuture<MqProto.FetchResponse>>();
+    private final ConcurrentMap<Long, PendingFetch> pendingFetches = new ConcurrentHashMap<Long, PendingFetch>();
     private final AtomicLong requestIds = new AtomicLong(1);
     private volatile boolean closed;
 
-    ClusterClient(int selfId, List<InetSocketAddress> nodes, Router router) {
+    ClusterClient(int selfId, List<InetSocketAddress> nodes, Router router,
+            PartitionShield shield) {
         this.selfId = selfId;
         this.nodes = nodes;
         this.router = router;
+        this.shield = shield;
         this.group = new NioEventLoopGroup(1, new DefaultThreadFactory("mini-mq-cluster"));
         this.bootstrap = new Bootstrap()
                 .group(group)
@@ -153,7 +159,7 @@ final class ClusterClient {
         Channel ch = connectSync(destId);
         long id = requestIds.incrementAndGet();
         CompletableFuture<MqProto.FetchResponse> future = new CompletableFuture<MqProto.FetchResponse>();
-        pendingFetches.put(id, future);
+        pendingFetches.put(id, new PendingFetch(future, destId));
         try {
             ch.writeAndFlush(new Frame(MessageType.FOLLOWER_FETCH, id, request.toByteArray()));
             return future.get(timeoutMs, TimeUnit.MILLISECONDS);
@@ -164,6 +170,50 @@ final class ClusterClient {
             throw new IOException("FOLLOWER_FETCH interrupted", e);
         } catch (Exception e) {
             throw new IOException("FOLLOWER_FETCH to node-" + destId + " failed", e);
+        } finally {
+            pendingFetches.remove(id);
+        }
+    }
+
+    /**
+     * A fetch that can be interrupted when Raft discovers a different
+     * leader. PartitionShield deliberately leaves TCP connections open, so
+     * waiting for the full replication timeout would otherwise pin the
+     * follower's only sync thread on the old leader.
+     */
+    MqProto.FetchResponse fetchUntilLeaderChanges(int destId, MqProto.FetchRequest request,
+            long timeoutMs, java.util.function.IntSupplier currentLeader)
+            throws IOException {
+        if (closed || destId < 0 || destId >= nodes.size()) {
+            throw new IOException("invalid cluster peer node-" + destId);
+        }
+        Channel ch = connectSync(destId);
+        long id = requestIds.incrementAndGet();
+        CompletableFuture<MqProto.FetchResponse> future = new CompletableFuture<MqProto.FetchResponse>();
+        pendingFetches.put(id, new PendingFetch(future, destId));
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+        try {
+            ch.writeAndFlush(new Frame(MessageType.FOLLOWER_FETCH, id, request.toByteArray()));
+            while (true) {
+                if (currentLeader.getAsInt() != destId) {
+                    throw new IOException("leader changed while fetching from node-" + destId);
+                }
+                long remaining = deadline - System.nanoTime();
+                if (remaining <= 0) {
+                    throw new IOException("FOLLOWER_FETCH to node-" + destId + " timed out");
+                }
+                try {
+                    return future.get(Math.min(TimeUnit.NANOSECONDS.toMillis(remaining), 100L),
+                            TimeUnit.MILLISECONDS);
+                } catch (TimeoutException stillWaiting) {
+                    // Re-check the leader identity at short intervals.
+                } catch (java.util.concurrent.ExecutionException e) {
+                    throw new IOException("FOLLOWER_FETCH to node-" + destId + " failed", e);
+                }
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("FOLLOWER_FETCH interrupted", e);
         } finally {
             pendingFetches.remove(id);
         }
@@ -200,13 +250,35 @@ final class ClusterClient {
     // ------------------------------------------------------------------
 
     private void completeFetch(Frame frame) {
+        PendingFetch pending = pendingFetches.remove(frame.requestId());
+        if (pending == null) {
+            return;
+        }
+        // Partition shield: the peer this response came from is blocked —
+        // to the syncer it must look exactly like the leader went silent
+        // (immediate failure, backoff, retry) rather than a real answer.
+        if (shield.blocksInbound(pending.peerId)) {
+            pending.future.completeExceptionally(
+                    new IOException("node-" + pending.peerId + " partitioned (shield)"));
+            return;
+        }
         MqProto.FetchResponse resp = parsePrefixed(frame.body());
-        CompletableFuture<MqProto.FetchResponse> future = pendingFetches.remove(frame.requestId());
-        if (future != null && resp != null) {
-            future.complete(resp);
-        } else if (future != null) {
-            future.completeExceptionally(
+        if (resp != null) {
+            pending.future.complete(resp);
+        } else {
+            pending.future.completeExceptionally(
                     new IOException("malformed FETCH_RESP for request " + frame.requestId()));
+        }
+    }
+
+    /** A fetch in flight plus the peer it went to (for response attribution). */
+    private static final class PendingFetch {
+        final CompletableFuture<MqProto.FetchResponse> future;
+        final int peerId;
+
+        PendingFetch(CompletableFuture<MqProto.FetchResponse> future, int peerId) {
+            this.future = future;
+            this.peerId = peerId;
         }
     }
 

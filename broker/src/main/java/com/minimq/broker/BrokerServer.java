@@ -61,6 +61,18 @@ public class BrokerServer {
      * and needs both storage handles alive.
      */
     private ReplicationService replication;
+    /**
+     * M4 partition injection handle (always present, inert until the chaos
+     * control port adds peer ids to the blacklist — see PartitionShield).
+     */
+    private PartitionShield shield = new PartitionShield();
+    /**
+     * M4 leader dedup window, or null when disabled (dedupWindowEntries=0,
+     * the M1-M3 semantics: every produce appends).
+     */
+    private DedupWindow dedupWindow;
+    /** M4 loopback chaos control port, or null when not configured. */
+    private ChaosControlServer chaosControl;
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
     private ThreadPoolExecutor businessPool;
@@ -83,7 +95,10 @@ public class BrokerServer {
             // replays/rebuilds the index tail at open; FETCH goes through it.
             consumeQueueStore = ConsumeQueueStore.open(consumeQueueRoot(config), commitLog);
             if (config.isClustered()) {
-                replication = new ReplicationService(config, commitLog, consumeQueueStore);
+                replication = new ReplicationService(config, commitLog, consumeQueueStore, shield);
+            }
+            if (config.getDedupWindowEntries() > 0) {
+                dedupWindow = new DedupWindow(config.getDedupWindowEntries());
             }
             BrokerRequestHandler handler = createRequestHandler(commitLog, consumeQueueStore);
             businessPool = createBusinessPool(config);
@@ -125,6 +140,14 @@ public class BrokerServer {
             // our votes must be able to reach us.
             if (replication != null) {
                 replication.start();
+            }
+            // M4 chaos control (loopback only): started AFTER the election
+            // machinery so the first "state" the harness reads is a real
+            // one. A broker without a chaos port has no ops surface.
+            if (config.getChaosControlPort() > 0) {
+                chaosControl = new ChaosControlServer(
+                        config.getChaosControlPort(), shield, chaosStateJson());
+                chaosControl.start();
             }
             started = true;
 
@@ -190,6 +213,61 @@ public class BrokerServer {
         return replication;
     }
 
+    /** The M4 partition injection handle (tests / chaos harness). */
+    public PartitionShield shield() {
+        return shield;
+    }
+
+    /** The M4 leader dedup window, or null when disabled (tests / harness). */
+    public DedupWindow dedupWindow() {
+        return dedupWindow;
+    }
+
+    /** The M4 chaos control port's actual bound port, or -1 when disabled. */
+    public int chaosPort() {
+        ChaosControlServer cc = chaosControl;
+        return cc != null ? cc.port() : -1;
+    }
+
+    /**
+     * The chaos control "state" payload: the matrix's timing decisions ("kill
+     * when replication lag is large") read these numbers straight from the
+     * node under test. Hand-rolled JSON — the broker has no JSON dependency
+     * and this is a fixed, tiny, ops-only shape.
+     */
+    private java.util.function.Supplier<String> chaosStateJson() {
+        return new java.util.function.Supplier<String>() {
+            @Override
+            public String get() {
+                StringBuilder sb = new StringBuilder(192);
+                sb.append("{\"node\":").append(config.getNodeId())
+                        .append(",\"role\":\"");
+                ReplicationService repl = replication;
+                if (repl != null) {
+                    sb.append(repl.role())
+                            .append("\",\"term\":").append(repl.term())
+                            .append(",\"leader\":").append(repl.isLeader())
+                            .append(",\"lastSeenLeader\":").append(repl.lastSeenLeader())
+                            .append(",\"hw\":").append(repl.highWatermark())
+                            .append(",\"isr\":").append(ChaosControlServer.ids(repl.isrSnapshot()));
+                } else {
+                    sb.append("STANDALONE\",\"leader\":true,\"hw\":").append(commitLog.maxOffset());
+                }
+                sb.append(",\"leo\":").append(commitLog.maxOffset())
+                        .append(",\"flushed\":").append(commitLog.flushedOffset());
+                DedupWindow dw = dedupWindow;
+                if (dw != null) {
+                    sb.append(",\"dedup\":{\"size\":").append(dw.size())
+                            .append(",\"hits\":").append(dw.hits())
+                            .append(",\"checks\":").append(dw.checks()).append('}');
+                }
+                return sb.append(",\"inBlack\":")
+                        .append(ChaosControlServer.ids(shield.inBlackSnapshot()))
+                        .append('}').toString();
+            }
+        };
+    }
+
     /** Idempotent; safe to call from a shutdown hook or directly. */
     public void shutdown() {
         synchronized (lifecycleLock) {
@@ -214,6 +292,12 @@ public class BrokerServer {
                 if (replication != null) {
                     replication.close();
                     replication = null;
+                }
+                // 2b. close the M4 chaos control port before the state it
+                // reports starts disappearing underneath it
+                if (chaosControl != null) {
+                    chaosControl.close();
+                    chaosControl = null;
                 }
                 // 3. drain in-flight business work (workers alive: responses flow)
                 businessPool.shutdown();
@@ -264,7 +348,8 @@ public class BrokerServer {
                 : ReplicationGate.standalone(commitLog);
         return new BrokerRequestHandler(commitLog, consumeQueues,
                 config.getFlushMode(), config.getFlushAwaitTimeoutMs(),
-                config.isZeroCopyFetch(), gate, config.getReplicationAwaitTimeoutMs());
+                config.isZeroCopyFetch(), gate, config.getReplicationAwaitTimeoutMs(),
+                dedupWindow);
     }
 
     /**

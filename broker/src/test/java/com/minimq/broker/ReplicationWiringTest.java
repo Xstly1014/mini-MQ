@@ -200,6 +200,43 @@ class ReplicationWiringTest {
         assertEquals(0L, fr.getNextOffset(), "the consumer cursor does not skip past the HW");
     }
 
+    @Test
+    void fetchRefusesWhenIsrIsTooSmallThenRespectsHwAfterRecovery() throws Exception {
+        FakeGate gate = new FakeGate();
+        BrokerRequestHandler h = handler(gate, 5_000L);
+
+        h.handle(TestFrames.produce(1, "t", "one"));
+        h.handle(TestFrames.produce(2, "t", "two"));
+        awaitIndex();
+        long thirdStart = TestFrames.parseAck((Frame) h.handle(
+                TestFrames.produce(3, "t", "three"))).getOffsets(0);
+        h.handle(TestFrames.produce(4, "t", "four"));
+        long logEnd = commitLog.maxOffset();
+        awaitIndex();
+
+        gate.admissible = false;
+        Frame refused = (Frame) h.handle(TestFrames.fetch(5, "t", thirdStart, 10));
+        MqProto.FetchResponse refusedFetch = TestFrames.parseFetch(refused);
+        assertEquals(MqProto.ErrorCode.ISR_TOO_SMALL, refusedFetch.getErrorCode());
+        assertEquals(thirdStart, refusedFetch.getNextOffset(),
+                "an unavailable read must preserve the consumer cursor");
+        assertEquals(0, refusedFetch.getRecordsCount());
+
+        gate.admissible = true;
+        gate.hw = thirdStart;
+        Frame partial = (Frame) h.handle(TestFrames.fetch(6, "t", thirdStart, 10));
+        MqProto.FetchResponse partialFetch = TestFrames.parseFetch(partial);
+        assertEquals(0, partialFetch.getRecordsCount(),
+                "recovered ISR does not bypass the HW gate");
+        assertEquals(thirdStart, partialFetch.getNextOffset());
+
+        gate.hw = logEnd;
+        Frame visible = (Frame) h.handle(TestFrames.fetch(7, "t", thirdStart, 10));
+        MqProto.FetchResponse visibleFetch = TestFrames.parseFetch(visible);
+        assertEquals(2, visibleFetch.getRecordsCount());
+        assertEquals(logEnd, visibleFetch.getNextOffset());
+    }
+
     // ------------------------------------------------------------------
     // the three ack tiers
     // ------------------------------------------------------------------

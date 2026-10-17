@@ -5,6 +5,8 @@
 > 协议帧格式一旦发布即冻结（改协议的代价随里程碑递增——M3 fetch 同步、心跳、选举投票全部复用本帧）。
 >
 > **v1.3（M3）**：新增节点间类型 0x08~0x0B（VOTE / VOTE_RESP / HEARTBEAT_RESP / FOLLOWER_FETCH，HEARTBEAT 0x07 自 M3 起启用）；FetchRequest 增副本字段、FetchResponse 增 epoch/错误通道、ProduceRequest 增 acks、ProduceAck 增错误码与 leader_hint。全部为追加/加字段，v1 帧布局不变、旧客户端语义不变。
+>
+> **v1.4（M4）**：ProduceStatus 增 DUPLICATE（Leader 会话级 seq_key 去重窗口命中，offsets 为原 offset）；ISR_TOO_SMALL 从"生产者按错误上报"升级为 SDK 暂时性错误自动重发。均为追加语义，v1 帧布局不变。
 
 ## 1. 帧格式
 
@@ -83,7 +85,8 @@ Broker 侧路由要求不解包 BODY 即可分流：消费者 FETCH 走业务池
 |----|------|------|-----------|
 | 0 | OK | 全部落盘 | complete 各 Future(offset) |
 | 1 | RETRY_LATER | broker 业务池饱和（背压） | SDK 自动重发：scheduler 线性退避（不阻塞回调线程），超过 maxRetries 后回调失败 |
-| 2 | ERROR | 服务端错误 | complete 异常 |
+| 2 | ERROR | 服务端错误 | complete 异常；error_code = ISR_TOO_SMALL 时为暂时性拒绝，SDK 自动重发（v1.4） |
+| 3 | DUPLICATE | v1.4（M4 去重窗口）：批内全部消息命中 Leader 会话级 seq_key 窗口，未追加 | 与 OK 同路径 complete：offsets 携带**首次追加**的原 offset；跨 Leader 的重发不命中窗口（会话级边界，最终仲裁仍在消费端幂等） |
 
 ### 5.1 应用级 ErrorCode（v1.3 / M3，PRODUCE_ACK 与 FETCH_RESP 共用）
 
@@ -92,7 +95,7 @@ Broker 侧路由要求不解包 BODY 即可分流：消费者 FETCH 走业务池
 | 0 | NONE | 正常 | — | — |
 | 1 | NOT_LEADER | 收请求的节点不是 Leader（或已不是） | 非 Leader 节点对 PRODUCE / FETCH | 按 leader_hint 直连新 Leader 重发；hint 为空则回 bootstrap 列表轮询（双路径） |
 | 2 | STALE_EPOCH | 请求携带的 Leader epoch 过期 | Leader 对过期 epoch 的节点间请求 | 旧 Leader 侧识别自己已被取代，转 Follower |
-| 3 | ISR_TOO_SMALL | acks=all 时 ISR 已收缩到 min.insync.replicas 以下 | Leader 对 PRODUCE(acks=all) | 拒绝写入（宁可拒绝，绝不静默降级）；生产者按错误上报 |
+| 3 | ISR_TOO_SMALL | acks=all 时 ISR 已收缩到 min.insync.replicas 以下 | Leader 对 PRODUCE(acks=all) | 拒绝写入（宁可拒绝，绝不静默降级）；v1.4 起生产者 SDK 视为暂时性错误自动重发（分区/ISR 收缩窗口内反复拒绝，愈合后收敛） |
 | 4 | TRUNCATE_TO | 请求方日志与 Leader 分叉，需回截 | Leader 对 FOLLOWER_FETCH | error_value = 截断点；Follower 截断本地日志后从该点重新拉取 |
 
 ## 6. BODY 契约（protobuf）
@@ -106,7 +109,7 @@ Broker 侧路由要求不解包 BODY 即可分流：消费者 FETCH 走业务池
 - **FetchResponse.high_watermark**：副本高水位（M3 落地）= ISR 内全部副本 LEO 的最小值；消费者只能读到 HW 之前的记录——"落后副本的消息对消费者不可见"
 - **FetchRequest.follower_id / follower_epoch**（v1.3，仅 FOLLOWER_FETCH）：副本身份 + 上次同步的 Leader epoch，epoch 仲裁的依据
 - **FetchResponse.leader_epoch / epoch_start_offset**（v1.3）：Follower 采纳新 epoch 并记录边界的依据
-- **MessageData.seq_key**：幂等键，hash 后写入存储 KEYHASH 字段；broker 去重窗口 M4 落地，v1 先打通字段链路
+- **MessageData.seq_key**：幂等键，hash 后写入存储 KEYHASH 字段；v1.4（M4）broker 端会话级去重窗口落地（配置开启，LRU 容量默认 10 万）
 
 ## 7. 版本演进规则
 

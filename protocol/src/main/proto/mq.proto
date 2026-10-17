@@ -75,6 +75,13 @@ enum ProduceStatus {
   // Broker business pool saturated: producer should back off and retry.
   RETRY_LATER = 1;
   ERROR = 2;
+  // M4 dedup window: every message in the request matched a seq_key already
+  // in the leader's window; nothing was appended and offsets carry the
+  // ORIGINAL offsets of the first append (the retry converged). The window
+  // is session-scoped (in-memory, per broker process): a retry that lands on
+  // a DIFFERENT leader is appended again — at-least-once, consumer-side
+  // idempotency by seq_key/key_hash stays the final arbiter.
+  DUPLICATE = 3;
 }
 
 // M3 application-level error codes, shared by PRODUCE_ACK and FETCH_RESP.

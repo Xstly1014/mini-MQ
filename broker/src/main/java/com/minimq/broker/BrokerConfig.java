@@ -62,12 +62,29 @@ public final class BrokerConfig {
     private long replicaLagMaxMs = 10_000;
     /** Raft leader heartbeat period (etcd 10:1 shape against the timeout). */
     private long heartbeatIntervalMs = 50;
-    /** Election timeout base; the actual timeout is randomized in [base, 2*base). */
+    /**
+     * Election timeout base; the actual timeout is randomized in [base, 2*base).
+     */
     private long electionTimeoutBaseMs = 300;
     /** acks=all HW-wait park timeout: expiry answers ERROR, never a lying OK. */
     private long replicationAwaitTimeoutMs = 5_000;
     /** FOLLOWER_FETCH batch budget (bytes per replication round). */
     private int replicaMaxFetchBytes = 1024 * 1024;
+
+    // ---- M4 reliability (chaos matrix / dedup / dead-letter support) ----
+    /**
+     * Loopback chaos control port (partition injection + state readback for
+     * the reliability matrix), or 0 = disabled. Test/ops tooling only — a
+     * production broker never sets it.
+     */
+    private int chaosControlPort = 0;
+    /**
+     * Leader session-scoped seq-key dedup window capacity (entries), or 0 =
+     * disabled (the M1-M3 semantics: every produce appends). Opt-in: legacy
+     * clients reuse seq-keys across producer instances, so the window must
+     * never be sprung on an existing deployment by an upgrade.
+     */
+    private int dedupWindowEntries = 0;
 
     public static BrokerConfig defaults() {
         return new BrokerConfig();
@@ -115,6 +132,16 @@ public final class BrokerConfig {
 
     public BrokerConfig replicaMaxFetchBytes(int replicaMaxFetchBytes) {
         this.replicaMaxFetchBytes = replicaMaxFetchBytes;
+        return this;
+    }
+
+    public BrokerConfig chaosControlPort(int chaosControlPort) {
+        this.chaosControlPort = chaosControlPort;
+        return this;
+    }
+
+    public BrokerConfig dedupWindowEntries(int dedupWindowEntries) {
+        this.dedupWindowEntries = dedupWindowEntries;
         return this;
     }
 
@@ -247,5 +274,13 @@ public final class BrokerConfig {
 
     public int getReplicaMaxFetchBytes() {
         return replicaMaxFetchBytes;
+    }
+
+    public int getChaosControlPort() {
+        return chaosControlPort;
+    }
+
+    public int getDedupWindowEntries() {
+        return dedupWindowEntries;
     }
 }
