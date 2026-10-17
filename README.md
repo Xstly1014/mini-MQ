@@ -1,124 +1,203 @@
 # mini-MQ
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Java](https://img.shields.io/badge/Java-8%2B-orange)
+![Java](https://img.shields.io/badge/build-JDK%2017%20(core%20targets%208)-orange)
 ![Maven](https://img.shields.io/badge/Maven-3.5%2B-green)
-![Status](https://img.shields.io/badge/status-M0%20storage%20kernel-brightgreen)
+![Status](https://img.shields.io/badge/status-all%20milestones%20done-brightgreen)
 
-A lightweight distributed message queue written in Java: a RocketMQ-style single
-CommitLog storage engine, combined with Kafka-style replication (fetch / leader
-epoch / high watermark) and a Raft-style election kernel.
+A lightweight distributed message queue written in Java: a RocketMQ-style
+single CommitLog storage engine, Kafka-style data-plane replication
+(fetch / leader epoch / high watermark), and a Raft-style election kernel —
+benchmarked honestly against a same-host Kafka (51% of its throughput,
+1.65x its P99, with the gap attributed bucket by bucket).
 
-The design goal is **correct core mechanisms with measurable performance**, not
-production completeness. Every milestone ships with unit tests and a
-reproducible benchmark.
+The goal is **correct core mechanisms with measured performance**, not
+production completeness. Every claim in this README traces to a committed
+evidence file.
+
+## Paper
+
+**[mini-MQ: A Learning-Scale Distributed Message Queue with Chaos-Verified
+Durability and Honest Benchmarks](paper/paper.pdf)** — a full paper (USENIX
+format) covering the design, the 12-cell chaos matrix, the group-commit /
+zero-copy measurements, and the same-host Kafka comparison. Source at
+[paper/paper.tex](paper/paper.tex); every figure is regenerated from the
+committed raw JSONL by [paper/make-figures.py](paper/make-figures.py).
+
+## Quick Start (target: 10 minutes)
+
+Requirements: JDK 17 (core modules target Java 8; the bench module compiles
+at release 17), Maven 3.5+, bash (Linux / WSL2 tested), free ports
+9701-9703. One command builds, starts a 3-node cluster, runs a 10k-message
+produce + consume smoke with full reconciliation, and tears down:
+
+```bash
+bash bench/quickstart.sh
+```
+
+Expected verdict:
+
+```
+QUICKSTART-PASS sent=10000 acked=10000 lost=0 dup=0 P99=485.065ms
+```
+
+`consumed == sent` is a hard reconcile: every produced record was acked and
+read back exactly once; any loss or duplicate breaks the count. The script
+also asserts zero ISR evictions during the smoke.
+
+Docker is **not** required — and no `docker-compose.yml` is shipped on
+purpose: the development machine's Docker daemon is unavailable, so a
+compose file could not be validated end to end. Shipping an untested
+"one-click" file would break the 10-minute promise it makes.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Client SDKs (producer / consumer)                  │  M1
+│  Client SDKs (producer / consumer, failover + retry)│  M1
 ├─────────────────────────────────────────────────────┤
-│  Custom binary protocol (magic / version / CRC)     │  M1
+│  Custom binary protocol — 16B fixed header          │  M1
+│  (magic/version/type/reqId/len) + protobuf body     │
 ├─────────────────────────────────────────────────────┤
-│  Network layer — Netty                              │  M1
+│  Network layer — Netty                               │  M1
 ├─────────────────────────────────────────────────────┤
-│  Storage — single CommitLog, mmap segments,         │
-│  CRC-checked records, crash recovery                │  M0 (done)
+│  Storage — single CommitLog, mmap segments, CRC     │  M0
+│  records, crash recovery; sparse ConsumeQueue       │
 ├─────────────────────────────────────────────────────┤
-│  Replication — fetch sync / epoch / HW +            │
-│  Raft-style leader election                         │  M3
+│  Replication — fetch sync / leader epoch / HW        │  M3
+│  + Raft-style election (PreVote)                    │
+├─────────────────────────────────────────────────────┤
+│  Reliability — group commit tiers, dedup window,    │  M2/M4
+│  retry budget + dead letters, chaos-tested          │
 └─────────────────────────────────────────────────────┘
 ```
 
-Key decisions (full rationale in [docs/design.md](docs/design.md)):
+Five lines that matter (details in [docs/design.md](docs/design.md) and
+[docs/protocol.md](docs/protocol.md)):
 
-| Concern | Decision | Rationale |
+1. **One sequential write stream**: all topics share a single CommitLog
+   (RocketMQ model); consumers read through a sparse ConsumeQueue index.
+2. **16-byte fixed header** + protobuf body: magic rejects garbage traffic
+   before parsing, REQUEST_ID pairs async responses, BODY_LENGTH is the
+   framing and DoS line.
+3. **Group-commit flush** (linger 500us + count 64): per-record fsync is
+   38,000x slower — batch it, like every real database does.
+4. **Zero-copy on the consume side only** (FileRegion): the produce path
+   must build + index + CRC in user space, so sendfile does not apply.
+5. **Hybrid consensus**: Raft for election (term / majority / PreVote),
+   Kafka-style fetch for data replication + leader-epoch arbitration —
+   the same split KRaft-era Kafka made.
+
+<!-- GENERATED by bench/gen-readme-bench.ps1 from result/ JSONL + Kafka txt -- do not hand-edit numbers -->
+## Benchmarks
+
+Headline numbers (1 KB messages, median of 3 rounds, every row reconciles consumed == produced):
+
+| Scenario | Throughput | P99 | Caliber |
+|---|---:|---:|---|
+| Single broker produce, SYNC_FLUSH | 169,808 msg/s | 110 ms | Windows, best conc 32; `result/m5-20261017-verified/produce.jsonl` |
+| Single broker produce, OS_FLUSH | 376,350 msg/s | 1,388 ms | WSL2, best conc 8; `result/m5-20261017-rf3-wsl/minimq-wsl-produce-os.jsonl` |
+| Tail consume (page-cache read) | 160,498 msg/s | 120 ms | produce-to-consume age, conc 16; `result/m5-20261017-verified/consume-tail.jsonl` |
+| Cold consume (broker restart, page cache NOT dropped) | 760,678 msg/s | 0.74 ms | consume poll, conc 32; `result/m5-20261017-verified/consume-cold.jsonl` |
+| **3-node RF=3 end-to-end (acks=all)** | **38,001 msg/s** | **1,555 ms** | WSL2, best conc 4; `result/m5-20261017-rf3-wsl/minimq-wsl-cluster-rf3-os.jsonl` |
+| Kafka 4.1.2 KRaft, same host & workload | 74,776 msg/s | 943 ms | RF=3 acks=all, median of 3; `result/m5-20261017-rf3-wsl/kafka-rf3-round*.txt` |
+| **mini-MQ / Kafka ratio** | **51%** | **1.65x** | same WSL2 host, RF=3, acks=all, 1 KB; four-bucket attribution in `docs/tuning.md` |
+
+Full RF=3 sweep (WSL2, OS_FLUSH, acks=all, 6 concurrency tiers x 3 rounds):
+
+| Concurrency | Throughput msg/s (median) | P50 ms | P99 ms |
+|---:|---:|---:|---:|
+| 1 | 36,577 | 742 | 1,589 |
+| 2 | 37,304 | 711 | 1,583 |
+| 4 | 38,001 | 711 | 1,555 |
+| 8 | 37,492 | 871 | 1,573 |
+| 16 | 37,662 | 861 | 1,570 |
+| 32 | 35,158 | 969 | 1,677 |
+
+Failover (M4 chaos matrix, 12/12 green): **RPO = 0** (zero acked-message loss, asserted per cell), **RTO ~2.9 s** worst-case client retry chain (8 s budget). Per-cell evidence: `result/m5-chaos-matrix.txt`.
+
+This section is **generated** from the raw JSONL by
+`bench/gen-readme-bench.ps1` — no hand-copied numbers. The full sweep,
+Kafka comparison, flame graphs and honest open items live in
+[docs/tuning.md](docs/tuning.md); the 12-cell chaos matrix and its
+postmortem in [docs/reliability-matrix.md](docs/reliability-matrix.md).
+
+## Decisions (8 ADRs, one file each)
+
+Full rationale — context, rejected alternatives, failure boundaries — in
+[docs/adr/](docs/adr/). The rejected alternative is the point: it is the
+pre-written answer to "did you consider X?".
+
+| # | Decision | Rejected alternative |
 |---|---|---|
-| Log layout | Single CommitLog per broker (RocketMQ model) | All topics share one sequential write stream; per-partition files degrade to random I/O as partition count grows (Kafka model) |
-| Segment I/O | Pre-allocated 1 GiB mmap segments | mmap writes are ~5x faster than per-record write syscalls (measured, see benchmark below) |
-| Durability | Group commit (batch flush) | Per-record force is fsync-bound: ~4 orders of magnitude slower |
-| Replication | Kafka-style data plane (fetch/epoch/HW), Raft only for election | A total-order Raft log is a throughput bottleneck for multi-partition workloads; epoch + HW achieve equivalent split-brain protection at lower cost |
-| Coordination | No ZooKeeper; static broker config + lease heartbeats | Smaller failure domain, sufficient for the target scale |
+| 1 | Single CommitLog sequential write + sparse index | Pulsar layered storage (BookKeeper) — 3-node deployment can't cash the benefit |
+| 2 | Custom 16B fixed-header binary protocol | HTTP/gRPC — framing overhead and pass-through cost |
+| 3 | Two-parameter group commit (linger/count) + 3 flush tiers | Per-record force — measured 83 msg/s ceiling |
+| 4 | Zero-copy consume-side only (FileRegion) | Produce-side zero-copy — produce must write+index+CRC in user space |
+| 5 | Kafka-style fetch data plane + Raft-style election | Raft for everything — total-order log bottlenecks multi-partition load |
+| 6 | Self-built chaos injection (ChaosRunner / PartitionShield) | Chaos Mesh — K8s-level tooling, nothing to aim at three bare JVMs |
+| 7 | Session-scoped dedup window (LRU 100k) | Cross-session exactly-once — needs transactions + 2PC |
+| 8 | Kafka comparison on WSL2, both sides | Windows-native comparison — NTFS mmap semantics distort both sides |
 
-## Storage kernel (M0, implemented)
+## Limits (what this is deliberately not)
 
-- **Sequential CommitLog**: append-only, all records in one global offset space.
-- **mmap segments**: 1 GiB pre-allocated files, named by their starting global
-  offset; rolling happens automatically when a record does not fit.
-- **Wire format** (little-endian): `4B total size | 1B magic | 4B CRC32 |
-  8B timestamp | 8B key hash | 4B payload length | payload`.
-- **Crash recovery**: on open, the tail segment is scanned; torn writes and
-  CRC-corrupted records are truncated back to the last valid offset, garbage
-  tail segments are dropped, valid empty tails are retained.
-- **Test coverage**: 100k-record replay across segment rolls, torn-tail
-  injection, on-disk CRC corruption, multi-segment continuity — 20/20 green.
-
-## Write-path benchmark (bench-v0)
-
-100,000 records x 1 KB payload, single thread, JDK 17, NVMe SSD
-(reproduction instructions below; full report in [docs/bench-v0.md](docs/bench-v0.md)):
-
-| Mode | Strategy | msg/s | MiB/s |
-|------|----------|-------|-------|
-| A | mmap, no force (page cache) | 3,158,569 | 3,099.6 |
-| B | mmap, force per record | 83 | 0.1 |
-| C | mmap, force every 100 records (group commit) | 4,748 | 4.7 |
-| D | FileChannel + DirectBuffer, no force | 634,400 | 622.6 |
-
-Findings: mmap puts outpace per-record write syscalls by ~5x; per-record
-durability is ~38,000x slower (fsync-bound); group commit recovers ~57x of
-that loss. Mode A measures page-cache write speed, not durable throughput —
-the production design is mmap + group commit.
-
-## Quick start
-
-Requirements: JDK 8+ and Maven 3.5+.
-
-Build and run the storage kernel tests:
-
-```bash
-mvn clean test
-```
-
-Run the write-path benchmark:
-
-```bash
-mvn -pl bench clean compile exec:java
-# optional args: <count> <payloadSize> <forceEveryN>
-mvn -pl bench clean compile exec:java -Dexec.args="100000 1000 100"
-```
+1. **No transactional messages, no cross-session exactly-once.** The dedup
+   window is leader-session-scoped; a retry that lands on a different
+   leader appends again. Final arbitration belongs to consumer-side
+   idempotency by seq_key ([ADR-0007](docs/adr/0007-session-scoped-dedup.md)).
+2. **Single write stream per broker.** All topics share one CommitLog, so
+   write parallelism is bounded by one sequential file. The decision flips
+   when single-file sequential write becomes the bottleneck
+   ([ADR-0001](docs/adr/0001-single-commitlog.md)).
+3. **No consumer-group rebalance.** Subscriptions are static; the full
+   Kafka rebalance protocol is out of scope.
+4. **No security layer.** No TLS, no authentication, no ACLs.
+5. **Scale evidence is 3 nodes on one host (loopback).** No claim is made
+   for 30 nodes, cross-DC replication, or cloud deployments.
+6. **Performance evidence is Linux-side (WSL2).** Windows runs the tests,
+   but the benchmark numbers above are not maintained for NTFS-native runs
+   ([ADR-0008](docs/adr/0008-kafka-baseline-wsl2.md)); the same doc tree
+   does not ship a docker-compose for the reason given in Quick Start.
 
 ## Project layout
 
 | Module | Purpose |
 |--------|---------|
-| `storage` | CommitLog storage kernel: record codec, mmap segment management, crash recovery |
-| `bench` | Storage-level benchmarks |
+| `storage` | CommitLog kernel: record codec, mmap segments, CRC crash recovery |
+| `protocol` | 16B header + protobuf wire contract (`docs/protocol.md`) |
+| `replica` | fetch replication state machine, leader epoch, high watermark |
+| `broker` | server: dispatch, ISR, election timers, dedup window, chaos port |
+| `client` | producer/consumer SDK: failover transport, retry, offset store |
+| `bench` | benchmarks, reconcile tools, cluster quickstart, table generator |
 
-## Roadmap
+Evidence and tooling: `bench/` (one-command reruns of everything),
+`result/` (raw JSONL, Kafka output, flame graphs, chaos matrix log),
+`docs/` (design, protocol, ADRs, tuning, reliability matrix).
+
+## Milestones
 
 | Milestone | Scope | Status |
 |-----------|-------|--------|
-| M0 | Storage kernel: CommitLog, mmap segments, CRC recovery, write-path baseline | Done |
-| M1 | Network layer: Netty, custom binary protocol, produce/consume loop, client SDK | Planned |
-| M2 | Performance kernel: group commit, zero-copy consumption (sendfile) | Planned |
-| M3 | Replication & election: fetch sync, leader epoch, high watermark, Raft-style voting | Planned |
-| M4 | Fault-injection correctness: loss-free verification under failures | Planned |
-| M5 | Full-system benchmark: throughput/P99 vs. Kafka on identical hardware, profiling | Planned |
-| M6 | Documentation and release hardening | Planned |
+| M0 | Storage kernel: CommitLog, mmap, CRC recovery, 4-mode write baseline | Done |
+| M1 | Netty network layer, binary protocol, client SDK | Done |
+| M2 | Performance kernel: group commit, zero-copy consume, object pools | Done |
+| M3 | Replication & election: fetch sync, epoch, HW, PreVote | Done |
+| M4 | Chaos reliability: 12-cell matrix, dedup, dead letters (209 tests) | Done |
+| M5 | Full benchmark vs. Kafka, flame graphs, 4-bucket attribution | Done |
+| M6 | README/ADR/resume hardening, quickstart acceptance | Done |
 
-## Scope and non-goals
-
-Intentionally not implemented: transactional messages, cross-datacenter
-replication, the full consumer rebalance protocol, and security
-authentication. Each omission is a scoped trade-off of this project; see
-[docs/design.md](docs/design.md) for the reasoning.
+Regression gate: `mvn clean test` — 209 tests, 0 failures expected
+(12 of them are the real-process chaos matrix, ~4 min). On WSL/drvfs
+checkouts drop `clean` (see the note in `bench/quickstart.sh`).
 
 ## Documentation
 
-- [docs/design.md](docs/design.md) — storage engine design: Kafka / RocketMQ / Pulsar comparison, wire format, recovery semantics
-- [docs/bench-v0.md](docs/bench-v0.md) — four-mode write-path benchmark report
+- [paper/paper.pdf](paper/paper.pdf) — the full paper (design, chaos matrix, measurements, Kafka comparison)
+- [docs/design.md](docs/design.md) — storage engine design, Kafka / RocketMQ / Pulsar comparison
+- [docs/protocol.md](docs/protocol.md) — the wire contract (framing, type table, byte order)
+- [docs/adr/](docs/adr/) — 8 architecture decision records
+- [docs/tuning.md](docs/tuning.md) — M5 benchmark archive, Kafka comparison, optimization war reports
+- [docs/reliability-matrix.md](docs/reliability-matrix.md) — 12-cell chaos matrix + postmortem
 
 ## License
 

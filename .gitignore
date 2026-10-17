@@ -2,6 +2,7 @@
 target/
 *.class
 .m2repo/
+.quickstart/
 
 # ide
 .idea/
@@ -15,10 +16,18 @@ results/
 *.jfr
 *.svg
 
-# internal planning documents & resume files (never push to GitHub)
+# latex build artifacts (paper/paper.pdf is committed; intermediates are not)
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+
+# internal planning documents & personal materials (never push to GitHub)
 docs/*.html
 docs/resume*.tex
 docs/简历.pdf
+docs/interview-prep.md
 
 # os
 .DS_Store

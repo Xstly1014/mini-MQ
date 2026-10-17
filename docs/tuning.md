@@ -56,7 +56,7 @@ bash bench/m5-kafka-rf3.sh     # Kafka 同机同参：600k 条 × 3 轮 + leader
 
 | 并发 | 吞吐 msg/s（中位） | P50 ms | P99 ms | 三轮吞吐原值 |
 |---:|---:|---:|---:|---|
-| 1 | 36,577 | 742 | 1,590 | 36577 / 36166 / 37841 |
+| 1 | 36,577 | 742 | 1,589 | 36577 / 36166 / 37841 |
 | 2 | 37,304 | 711 | 1,583 | 38243 / 37304 / 36256 |
 | 4 | 38,001 | 711 | 1,555 | 38422 / 37859 / 38001 |
 | 8 | 37,492 | 871 | 1,573 | 37492 / 37543 / 35879 |
@@ -151,9 +151,9 @@ bash bench/m5-kafka-rf3.sh     # Kafka 同机同参：600k 条 × 3 轮 + leader
 |---|---|---|
 | 端到端吞吐（1KB, acks=all, RF=3） | **3.8 万 msg/s**（38,001 @ c=4 三轮中位） | WSL2 三节点 OS_FLUSH、linger 500µs、批量 64；`minimq-wsl-cluster-rf3-os.jsonl` |
 | P99 端到端延迟（同上） | **1.56 s** | 同上（跨并发档 1.55–1.68s） |
-| 单机纯生产吞吐（SYNC_FLUSH） | 16.8 万 msg/s（c=4 中位） | Windows 单 broker、1KB；`m5-20261017-verified/produce.jsonl` |
+| 单机纯生产吞吐（SYNC_FLUSH） | 17.0 万 msg/s（c=32 中位，平台 157k–170k） | Windows 单 broker、1KB；`m5-20261017-verified/produce.jsonl` |
 | 单机纯生产吞吐（OS_FLUSH） | 37.6 万 msg/s（c=8 中位） | WSL2 单 broker、1KB；`minimq-wsl-produce-os.jsonl` |
-| 追尾消费吞吐（页缓存命中） | 16.0 万 msg/s（c=32 中位） | 边写边读、消息年龄口径；`consume-tail.jsonl` |
+| 追尾消费吞吐（页缓存命中） | 16.0 万 msg/s（c=16 中位 160,498） | 边写边读、消息年龄口径；`consume-tail.jsonl` |
 | 自研 = Kafka 同机同参 | **吞吐 51%，P99 1.65×** | 同宿主、RF=3 acks=all、1KB；四桶归因见上节 |
 | 优化对照战报 | **4 组**（2 组 M2 回填 + 锁临界区 + 复制链路修复） | 每组四段式 + 火焰图/日志证据链 |
 | 故障转移 RTO / RPO | **~2.9s / 0**（12/12 格，预算 8s） | 混沌矩阵；响亮报错窗口 18.3s 单列，不计入 RTO |
